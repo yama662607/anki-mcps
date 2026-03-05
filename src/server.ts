@@ -32,10 +32,19 @@ export function createRuntime(): AppRuntime {
     stagedMarkerTag,
   });
 
-  const server = new McpServer({
-    name: 'anki-mcps',
-    version: '0.1.0',
-  });
+  const server = new McpServer(
+    {
+      name: 'anki-mcps',
+      version: '0.1.0',
+    },
+    {
+      instructions: [
+        'Use this flow for card creation: list_card_types -> get_card_type_schema -> validate_card_fields -> create_staged_card -> open_staged_card_preview -> commit_staged_card or discard_staged_card.',
+        'Never commit without explicit user approval in natural language.',
+        'Write tools require explicit profileId and create_staged_card requires clientRequestId.',
+      ].join(' '),
+    },
+  );
 
   registerMcpHandlers(server, { catalogService, draftService });
 

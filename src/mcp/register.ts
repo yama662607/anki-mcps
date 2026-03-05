@@ -143,7 +143,7 @@ export function registerMcpHandlers(server: McpServer, services: {
     'create_staged_card',
     {
       title: 'Create Staged Card',
-      description: 'Create a staged card draft with idempotency and isolation.',
+      description: 'Create a staged draft only (not committed). Requires profileId and clientRequestId.',
       inputSchema: createStagedCardInputSchema,
     },
     async (input) => {
@@ -161,7 +161,7 @@ export function registerMcpHandlers(server: McpServer, services: {
     'open_staged_card_preview',
     {
       title: 'Open Staged Card Preview',
-      description: 'Open Anki Browser for staged card preview.',
+      description: 'Open Anki Browser for visual review of a staged draft before commit/discard.',
       inputSchema: openStagedCardPreviewInputSchema,
     },
     async (input) => {
@@ -179,7 +179,7 @@ export function registerMcpHandlers(server: McpServer, services: {
     'commit_staged_card',
     {
       title: 'Commit Staged Card',
-      description: 'Commit a staged draft after explicit review decision.',
+      description: 'Finalize a staged draft after explicit user approval and full reviewDecision=true checks.',
       inputSchema: commitStagedCardInputSchema,
     },
     async (input) => {
