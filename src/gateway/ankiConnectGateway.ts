@@ -7,9 +7,13 @@ type AnkiResponse<T> = {
 };
 
 export class AnkiConnectGateway implements AnkiGateway {
+  private guiPreviewNoteSupported: boolean | undefined;
+
   constructor(private readonly endpoint = process.env.ANKI_CONNECT_URL ?? 'http://127.0.0.1:8765') {}
 
   async createNote(input: CreateNoteInput): Promise<CreateNoteResult> {
+    await this.call<number>('createDeck', { deck: input.deckName });
+
     const noteId = await this.call<number>('addNote', {
       note: {
         deckName: input.deckName,
@@ -59,6 +63,18 @@ export class AnkiConnectGateway implements AnkiGateway {
     const query = `nid:${noteId}`;
     const result = await this.call<unknown>('guiBrowse', { query });
     const selectedCardIds = Array.isArray(result) ? (result as number[]) : [];
+
+    if (selectedCardIds.length > 0) {
+      await this.call<boolean>('guiSelectCard', { card: selectedCardIds[0] });
+    }
+
+    // Prefer extension API when available; fallback keeps compatibility.
+    if (await this.supportsGuiPreviewNote()) {
+      await this.call<unknown>('guiPreviewNote', { note: noteId });
+    } else {
+      await this.call<unknown>('guiEditNote', { note: noteId });
+    }
+
     return {
       opened: true,
       browserQuery: query,
@@ -81,6 +97,24 @@ export class AnkiConnectGateway implements AnkiGateway {
 
   async deleteNote(noteId: number): Promise<void> {
     await this.call<unknown>('deleteNotes', { notes: [noteId] });
+  }
+
+  private async supportsGuiPreviewNote(): Promise<boolean> {
+    if (this.guiPreviewNoteSupported !== undefined) {
+      return this.guiPreviewNoteSupported;
+    }
+
+    try {
+      const reflected = await this.call<{ actions?: string[] }>('apiReflect', {
+        scopes: ['actions'],
+        actions: ['guiPreviewNote'],
+      });
+      this.guiPreviewNoteSupported = Array.isArray(reflected.actions) && reflected.actions.includes('guiPreviewNote');
+    } catch {
+      this.guiPreviewNoteSupported = false;
+    }
+
+    return this.guiPreviewNoteSupported;
   }
 
   private async getFirstNoteInfo(noteId: number): Promise<Record<string, any>> {

@@ -32,3 +32,6 @@ npm run dev
 
 - write tools require explicit `profileId`
 - staged cards are suspended until committed
+- preview integration:
+  - preferred: `guiPreviewNote` (from optional `anki-connect-extension` add-on)
+  - fallback: `guiBrowse -> guiSelectCard -> guiEditNote`

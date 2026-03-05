@@ -99,6 +99,11 @@ export class CatalogService {
     const modifiedFields: string[] = [];
 
     for (const schema of cardType.fields) {
+      const hasField = Object.prototype.hasOwnProperty.call(input.fields, schema.name);
+      if (!hasField && !schema.required) {
+        continue;
+      }
+
       const raw = input.fields[schema.name] ?? '';
       const sanitized = sanitizeByPolicy(raw, schema.allowedHtmlPolicy);
       normalizedFields[schema.name] = sanitized.value;
