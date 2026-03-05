@@ -1,0 +1,14 @@
+# Local assistant metadata
+.codex/
+
+# Reference clones used for local benchmark/research
+clones/
+
+# OS / editor artifacts
+.DS_Store
+
+# Common build artifacts
+node_modules/
+dist/
+coverage/
+*.log
