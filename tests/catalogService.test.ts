@@ -41,4 +41,21 @@ describe('CatalogService', () => {
     expect(result.valid).toBe(false);
     expect(result.errors.some((e) => e.code === 'UNKNOWN_FIELD')).toBe(true);
   });
+
+  it('omits unspecified optional fields from normalized payload', () => {
+    const result = service.validateFields({
+      cardTypeId: 'programming.v1.concept-qa',
+      fields: {
+        Front: 'What is narrowing?',
+        Back: 'Refining a union type by runtime checks.',
+      },
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.normalized.fields).toEqual({
+      Back: 'Refining a union type by runtime checks.',
+      Front: 'What is narrowing?',
+    });
+    expect(result.sanitization.policyByField.Code).toBeUndefined();
+  });
 });
