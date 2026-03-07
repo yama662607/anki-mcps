@@ -6,9 +6,12 @@ Implemented test suites:
 - `tests/sanitize.test.ts`
 - `tests/catalogService.test.ts`
 - `tests/draftService.test.ts`
+- `tests/noteTypeService.test.ts`
+- `tests/ankiConnectGateway.test.ts`
 
 Coverage includes:
 - schema/sanitizer behavior
+- note-type discovery, dry-run, additive-safe update, and dependency failure wrapping
 - staged creation and idempotent retry
 - commit idempotency
 - conflict detection after manual edit

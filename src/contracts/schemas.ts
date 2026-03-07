@@ -6,6 +6,9 @@ export const profileIdSchema = z.string().min(1).max(120);
 export const cardTypeIdSchema = z.string().min(1).max(120);
 export const draftIdSchema = z.string().min(1).max(120);
 export const clientRequestIdSchema = z.string().min(1).max(120);
+export const modelNameSchema = z.string().min(1).max(180);
+export const fieldNameSchema = z.string().min(1).max(180);
+export const templateNameSchema = z.string().min(1).max(180);
 
 export const draftStateSchema = z.enum(['staged', 'superseded', 'committed', 'discarded']);
 
@@ -20,6 +23,75 @@ export const reviewDecisionSchema = z
   .strict();
 
 export const listCardTypesInputSchema = z.object({ profileId: profileIdSchema.optional() }).strict();
+
+export const listNoteTypesInputSchema = z.object({ profileId: profileIdSchema.optional() }).strict();
+
+export const getNoteTypeSchemaInputSchema = z
+  .object({
+    modelName: modelNameSchema,
+    profileId: profileIdSchema.optional(),
+  })
+  .strict();
+
+export const noteTypeFieldInputSchema = z
+  .object({
+    name: fieldNameSchema,
+    description: z.string().max(1000).optional(),
+  })
+  .strict();
+
+export const noteTypeTemplateInputSchema = z
+  .object({
+    name: templateNameSchema,
+    front: z.string(),
+    back: z.string(),
+  })
+  .strict();
+
+export const upsertNoteTypeInputSchema = z
+  .object({
+    profileId: profileIdSchema,
+    modelName: modelNameSchema,
+    fields: z.array(noteTypeFieldInputSchema).min(1),
+    templates: z.array(noteTypeTemplateInputSchema).min(1),
+    css: z.string().optional(),
+    isCloze: z.boolean().optional(),
+    dryRun: z.boolean().optional(),
+  })
+  .strict();
+
+export const upsertCardTypeDefinitionInputSchema = z
+  .object({
+    profileId: profileIdSchema,
+    definition: z
+      .object({
+        cardTypeId: cardTypeIdSchema,
+        label: z.string().min(1).max(180),
+        modelName: modelNameSchema,
+        defaultDeck: z.string().min(1).max(180),
+        requiredFields: z.array(fieldNameSchema),
+        optionalFields: z.array(fieldNameSchema),
+        renderIntent: z.enum(['recognition', 'production', 'cloze', 'mixed']),
+        allowedHtmlPolicy: z.enum(['plain_text_only', 'safe_inline_html', 'trusted_html']),
+        fields: z.array(
+          z
+            .object({
+              name: fieldNameSchema,
+              required: z.boolean(),
+              type: z.enum(['text', 'markdown', 'html', 'audio_ref', 'image_ref']),
+              allowedHtmlPolicy: z.enum(['plain_text_only', 'safe_inline_html', 'trusted_html']),
+              minLength: z.number().int().min(0).optional(),
+              maxLength: z.number().int().min(0).optional(),
+              multiline: z.boolean().optional(),
+              example: z.string().optional(),
+              hint: z.string().optional(),
+            })
+            .strict(),
+        ),
+      })
+      .strict(),
+  })
+  .strict();
 
 export const getCardTypeSchemaInputSchema = z
   .object({
@@ -91,6 +163,10 @@ export const cleanupStagedCardsInputSchema = z
   .strict();
 
 export type ListCardTypesInput = z.infer<typeof listCardTypesInputSchema>;
+export type ListNoteTypesInput = z.infer<typeof listNoteTypesInputSchema>;
+export type GetNoteTypeSchemaInput = z.infer<typeof getNoteTypeSchemaInputSchema>;
+export type UpsertNoteTypeInput = z.infer<typeof upsertNoteTypeInputSchema>;
+export type UpsertCardTypeDefinitionInput = z.infer<typeof upsertCardTypeDefinitionInputSchema>;
 export type GetCardTypeSchemaInput = z.infer<typeof getCardTypeSchemaInputSchema>;
 export type ValidateCardFieldsInput = z.infer<typeof validateCardFieldsInputSchema>;
 export type CreateStagedCardInput = z.infer<typeof createStagedCardInputSchema>;

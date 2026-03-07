@@ -1,5 +1,14 @@
 import { AppError } from '../contracts/errors.js';
-import type { AnkiGateway, CreateNoteInput, CreateNoteResult, NoteSnapshot, PreviewResult } from './ankiGateway.js';
+import type {
+  AnkiGateway,
+  CreateNoteInput,
+  CreateNoteResult,
+  NoteSnapshot,
+  NoteTypeSchemaResult,
+  NoteTypeSummaryResult,
+  PreviewResult,
+  UpsertNoteTypeInput,
+} from './ankiGateway.js';
 
 type AnkiResponse<T> = {
   result: T;
@@ -82,6 +91,108 @@ export class AnkiConnectGateway implements AnkiGateway {
     };
   }
 
+  async listNoteTypes(): Promise<NoteTypeSummaryResult[]> {
+    const modelNames = await this.call<string[]>('modelNames', {});
+    const schemas = await Promise.all(modelNames.map(async (modelName) => this.getNoteTypeSchema(modelName)));
+    return schemas.map((schema) => ({
+      modelName: schema.modelName,
+      fieldNames: [...schema.fieldNames],
+      templateNames: schema.templates.map((template) => template.name),
+      isCloze: schema.isCloze,
+    }));
+  }
+
+  async getNoteTypeSchema(modelName: string): Promise<NoteTypeSchemaResult> {
+    const knownModels = await this.call<string[]>('modelNames', {});
+    if (!knownModels.includes(modelName)) {
+      throw new AppError('NOT_FOUND', `Model not found: ${modelName}`);
+    }
+
+    const fieldNames = await this.call<string[]>('modelFieldNames', { modelName });
+    const rawTemplates = await this.call<Record<string, { Front?: string; Back?: string }>>('modelTemplates', { modelName });
+    const styling = await this.call<{ css?: string }>('modelStyling', { modelName });
+    const rawFieldsOnTemplates = await this.call<
+      Record<string, Array<{ field?: string; ord?: number }>>
+    >('modelFieldsOnTemplates', { modelName });
+
+    const templates = Object.entries(rawTemplates).map(([name, template]) => ({
+      name,
+      front: template.Front ?? '',
+      back: template.Back ?? '',
+    }));
+
+    return {
+      modelName,
+      fieldNames,
+      templates,
+      css: styling.css ?? '',
+      fieldsOnTemplates: this.normalizeFieldsOnTemplates(rawFieldsOnTemplates),
+      isCloze: this.detectCloze(templates),
+    };
+  }
+
+  async upsertNoteType(input: UpsertNoteTypeInput): Promise<NoteTypeSchemaResult> {
+    const knownModels = await this.call<string[]>('modelNames', {});
+
+    if (!knownModels.includes(input.modelName)) {
+      await this.call<unknown>('createModel', {
+        modelName: input.modelName,
+        inOrderFields: input.fieldNames,
+        cardTemplates: input.templates.map((template) => ({
+          Name: template.name,
+          Front: template.front,
+          Back: template.back,
+        })),
+        css: input.css,
+        isCloze: input.isCloze,
+      });
+      return this.getNoteTypeSchema(input.modelName);
+    }
+
+    for (const fieldName of input.newFieldNames) {
+      await this.call<unknown>('modelFieldAdd', {
+        modelName: input.modelName,
+        fieldName,
+        index: input.fieldNames.indexOf(fieldName),
+      });
+    }
+
+    for (const template of input.newTemplates) {
+      await this.call<unknown>('modelTemplateAdd', {
+        modelName: input.modelName,
+        template: {
+          Name: template.name,
+          Front: template.front,
+          Back: template.back,
+        },
+      });
+    }
+
+    await this.call<unknown>('updateModelTemplates', {
+      model: {
+        name: input.modelName,
+        templates: Object.fromEntries(
+          input.templates.map((template) => [
+            template.name,
+            {
+              Front: template.front,
+              Back: template.back,
+            },
+          ]),
+        ),
+      },
+    });
+
+    await this.call<unknown>('updateModelStyling', {
+      model: {
+        name: input.modelName,
+        css: input.css,
+      },
+    });
+
+    return this.getNoteTypeSchema(input.modelName);
+  }
+
   async applyStagedIsolation(_noteId: number, cardIds: number[], _stagedTag: string): Promise<void> {
     if (cardIds.length > 0) {
       await this.call<boolean>('suspend', { cards: cardIds });
@@ -124,6 +235,26 @@ export class AnkiConnectGateway implements AnkiGateway {
       throw new AppError('NOT_FOUND', `Note not found: ${noteId}`);
     }
     return note;
+  }
+
+  private normalizeFieldsOnTemplates(
+    raw: Record<string, Array<{ field?: string; ord?: number }>>,
+  ): Record<string, { front: string[]; back: string[] }> {
+    return Object.fromEntries(
+      Object.entries(raw).map(([templateName, entries]) => {
+        const front = entries
+          .filter((entry) => entry.ord === 0 && typeof entry.field === 'string')
+          .map((entry) => entry.field as string);
+        const back = entries
+          .filter((entry) => entry.ord === 1 && typeof entry.field === 'string')
+          .map((entry) => entry.field as string);
+        return [templateName, { front, back }];
+      }),
+    );
+  }
+
+  private detectCloze(templates: Array<{ front: string; back: string }>): boolean {
+    return templates.some((template) => template.front.includes('{{cloze:') || template.back.includes('{{cloze:'));
   }
 
   private async call<T>(action: string, params: Record<string, unknown>): Promise<T> {

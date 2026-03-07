@@ -1,30 +1,24 @@
-# TypeScript v1 Card Pack (Concept / Output / Debug)
+# TypeScript v1 Card Pack
 
-This file defines initial note-type templates and starter cards for TypeScript learning.
+This file records the applied TypeScript note types and starter cards currently in use.
 
 ## 1) `ts.v1.concept`
 
 ### Fields
 - `Prompt`
 - `Answer`
+- `DetailedExplanation`
 - `Contrast`
 - `Example`
 
 ### Front Template
 ```html
-<div class="ts-card ts-concept">
-  <div class="badge">TypeScript Concept</div>
-  <div class="prompt">{{Prompt}}</div>
-  {{#Contrast}}<div class="contrast">Compare: {{Contrast}}</div>{{/Contrast}}
-</div>
+<div class="ts-card ts-concept"><div class="badge">概念</div><div class="prompt">{{Prompt}}</div>{{#Contrast}}<div class="contrast">比較: {{Contrast}}</div>{{/Contrast}}</div>
 ```
 
 ### Back Template
 ```html
-{{FrontSide}}
-<hr id="answer" />
-<div class="answer">{{Answer}}</div>
-{{#Example}}<pre class="code"><code>{{Example}}</code></pre>{{/Example}}
+{{FrontSide}}<hr id="answer" /><div class="answer-block"><div class="section-label">要点</div><div class="answer">{{Answer}}</div></div>{{#DetailedExplanation}}<div class="explainer"><div class="section-label">解説</div><div>{{DetailedExplanation}}</div></div>{{/DetailedExplanation}}{{#Example}}<div class="example-block"><div class="section-label">例</div><pre class="code"><code>{{Example}}</code></pre></div>{{/Example}}
 ```
 
 ## 2) `ts.v1.output`
@@ -37,19 +31,12 @@ This file defines initial note-type templates and starter cards for TypeScript l
 
 ### Front Template
 ```html
-<div class="ts-card ts-output">
-  <div class="badge">TypeScript Output</div>
-  <pre class="code"><code>{{Code}}</code></pre>
-  <div class="question">{{Question}}</div>
-</div>
+<div class="ts-card ts-output"><div class="badge">出力予測</div><div class="question">{{Question}}</div><div class="code-shell"><pre class="code"><code>{{Code}}</code></pre></div></div>
 ```
 
 ### Back Template
 ```html
-{{FrontSide}}
-<hr id="answer" />
-<div class="expected"><strong>Expected:</strong> {{Expected}}</div>
-<div class="reason"><strong>Reason:</strong> {{Reason}}</div>
+{{FrontSide}}<hr id="answer" /><div class="answer-block"><div class="section-label">答え</div><div class="expected">{{Expected}}</div></div>{{#Reason}}<div class="reason-block"><div class="section-label">解説</div><div class="reason">{{Reason}}</div></div>{{/Reason}}
 ```
 
 ## 3) `ts.v1.debug`
@@ -63,81 +50,44 @@ This file defines initial note-type templates and starter cards for TypeScript l
 
 ### Front Template
 ```html
-<div class="ts-card ts-debug">
-  <div class="badge">TypeScript Debug</div>
-  <pre class="code"><code>{{BuggyCode}}</code></pre>
-  <div class="symptom"><strong>Symptom:</strong> {{Symptom}}</div>
-</div>
+<div class="ts-card ts-debug"><div class="badge">デバッグ</div><div class="code-shell"><pre class="code"><code>{{BuggyCode}}</code></pre></div><div class="symptom">症状: {{Symptom}}</div></div>
 ```
 
 ### Back Template
 ```html
-{{FrontSide}}
-<hr id="answer" />
-<div><strong>Fix:</strong></div>
-<pre class="code"><code>{{Fix}}</code></pre>
-<div class="root"><strong>Root cause:</strong> {{RootCause}}</div>
-<div class="rule"><strong>Rule:</strong> {{Rule}}</div>
+{{FrontSide}}<hr id="answer" /><div class="fix-block"><div class="section-label">修正</div><pre class="code"><code>{{Fix}}</code></pre></div><div class="cause-block"><div class="section-label">原因</div><div class="root">{{RootCause}}</div></div><div class="rule-block"><div class="section-label">ルール</div><div class="rule">{{Rule}}</div></div>
 ```
 
-## Shared CSS Policy (minimal, mobile-safe)
+## Shared Design Direction
 
-```css
-.card {
-  font-family: "SF Pro Text", "Noto Sans JP", sans-serif;
-  line-height: 1.45;
-  font-size: 18px;
-  color: #1a1a1a;
-  background: #f9f8f4;
-}
-.ts-card { padding: 8px 2px; }
-.badge {
-  display: inline-block;
-  font-size: 12px;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  color: #5c4b3a;
-  background: #efe5d6;
-  padding: 2px 8px;
-  border-radius: 999px;
-  margin-bottom: 10px;
-}
-.prompt, .question, .symptom { margin-top: 6px; font-weight: 600; }
-.contrast, .reason, .root, .rule { margin-top: 10px; color: #3d3d3d; }
-.answer, .expected { margin-top: 8px; font-weight: 700; }
-.code {
-  background: #1f2430;
-  color: #e6e6e6;
-  padding: 10px;
-  border-radius: 8px;
-  overflow-x: auto;
-  font-size: 14px;
-}
-@media (max-width: 480px) {
-  .card { font-size: 16px; }
-  .code { font-size: 13px; }
-}
-```
+- dark theme
+- rounded card shell with generous outer margin
+- Japanese labels inside note templates
+- consistent code-block treatment across concept / output / debug
 
 ## Starter 3 Cards
 
-### Card 1 (`ts.v1.concept`)
-- `Prompt`: `What is the practical difference between any and unknown?`
-- `Answer`: `any disables type checking for that value. unknown keeps type safety and requires narrowing before use.`
-- `Contrast`: `any vs unknown`
+### Card 1 (`programming.v1.ts-concept`)
+- `Prompt`: `any と unknown の実用上の違いは何ですか？`
+- `Answer`: `any は型チェックを外し、unknown は narrowing を要求します。`
+- `DetailedExplanation`: `any を使うと、その値に対する型検査がほぼ無効になり、誤ったプロパティアクセスやメソッド呼び出しも通りやすくなります。unknown は「型がまだ分からない値」として受け取り、実際に使う前に typeof や if 文で型を絞り込む必要があります。そのため、外部入力や一時的に型不明な値を扱うときは unknown の方が安全です。`
+- `Contrast`: `any と unknown`
 - `Example`:
 ```ts
 let a: any = "x";
-a.toFixed(); // no compile error
+a.toFixed(); // コンパイルエラーにならない
 
 let u: unknown = "x";
-// u.toFixed(); // compile error
+// u.toFixed(); // コンパイルエラー
 if (typeof u === "string") {
   u.toUpperCase();
 }
 ```
 
-### Card 2 (`ts.v1.output`)
+### Card 2 (`programming.v1.ts-output`)
+- `Question`: `このコードでは何が出力されますか？`
+- `Expected`: `"HI" または "42.0"`
+- `Reason`: `x の型は最初は string | number ですが、if (typeof x === "string") に入るとその中では x を string と確定して扱えます。これが narrowing です。else 側では number と確定するので toFixed(1) を安全に呼び出せます。`
 - `Code`:
 ```ts
 const x: string | number = Math.random() > 0.5 ? "hi" : 42;
@@ -147,11 +97,11 @@ if (typeof x === "string") {
   console.log(x.toFixed(1));
 }
 ```
-- `Question`: `What can be printed?`
-- `Expected`: `"HI" or "42.0"`
-- `Reason`: `typeof narrowing selects string branch or number branch.`
 
-### Card 3 (`ts.v1.debug`)
+### Card 3 (`programming.v1.ts-debug`)
+- `Symptom`: `Object is possibly null.`
+- `RootCause`: `union 型に null が含まれているのに、絞り込みなしで user.name にアクセスしているためです。`
+- `Rule`: `null を含む型では、プロパティアクセス前に必ず絞り込みます。`
 - `BuggyCode`:
 ```ts
 type User = { name: string };
@@ -159,7 +109,6 @@ function greet(user: User | null) {
   return "Hi " + user.name;
 }
 ```
-- `Symptom`: `Object is possibly 'null'.`
 - `Fix`:
 ```ts
 type User = { name: string };
@@ -168,5 +117,3 @@ function greet(user: User | null) {
   return "Hi " + user.name;
 }
 ```
-- `RootCause`: `Union type includes null but code accesses property without narrowing.`
-- `Rule`: `For nullable unions, narrow before property access.`

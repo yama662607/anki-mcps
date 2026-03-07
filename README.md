@@ -5,6 +5,8 @@ TypeScript MCP server for staged, review-first Anki card creation.
 ## Features
 
 - card type catalog + schema introspection
+- note type discovery and additive-safe authoring (`dryRun` default)
+- custom card type registry merged with builtin catalog
 - strict field validation and HTML policy sanitization
 - staged lifecycle (`create -> preview -> commit/discard`)
 - deterministic conflict detection via fingerprints
@@ -31,6 +33,8 @@ npm run dev
 ## Notes
 
 - write tools require explicit `profileId`
+- note type authoring flow:
+  - `list_note_types -> get_note_type_schema -> upsert_note_type(dryRun=true) -> upsert_note_type(dryRun=false) -> upsert_card_type_definition`
 - staged cards are suspended until committed
 - preview integration:
   - preferred: `guiPreviewNote` (from optional `anki-connect-extension` add-on)

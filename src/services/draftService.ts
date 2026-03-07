@@ -4,7 +4,6 @@ import type { DraftRecord, DraftState, ReviewDecision } from '../contracts/types
 import { toCanonicalJson, normalizeTags } from '../utils/canonical.js';
 import { sha256 } from '../utils/hash.js';
 import { resolveProfileId } from '../utils/profile.js';
-import { findCardType } from '../contracts/catalog.js';
 import type { AnkiGateway } from '../gateway/ankiGateway.js';
 import { DraftStore } from '../persistence/draftStore.js';
 import { CatalogService } from './catalogService.js';
@@ -61,6 +60,7 @@ export class DraftService {
     }
 
     const validation = this.catalogService.validateFields({
+      profileId,
       cardTypeId: input.cardTypeId,
       fields: input.fields,
       deckName: input.deckName,
@@ -74,10 +74,7 @@ export class DraftService {
       });
     }
 
-    const cardType = findCardType(input.cardTypeId);
-    if (!cardType) {
-      throw new AppError('NOT_FOUND', `Unknown cardTypeId: ${input.cardTypeId}`);
-    }
+    const cardType = this.catalogService.getCardTypeDefinition(profileId, input.cardTypeId);
 
     let chainDepth = 0;
     if (input.supersedesDraftId) {
@@ -478,7 +475,7 @@ export class DraftService {
   getCatalogResourcePayload() {
     return {
       contractVersion: '1.0.0',
-      ...this.catalogService.listCardTypes(),
+      ...this.catalogService.listCardTypes(this.config.activeProfileId ?? 'default'),
     };
   }
 

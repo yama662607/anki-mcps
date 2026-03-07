@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import type { DraftListItem, DraftRecord, DraftState } from '../contracts/types.js';
+import type { CardTypeDefinition, CustomCardTypeDefinition, DraftListItem, DraftRecord, DraftState } from '../contracts/types.js';
 
 export type DraftRow = {
   profile_id: string;
@@ -24,6 +24,13 @@ export type DraftRow = {
   updated_at: string;
   committed_at: string | null;
   discarded_at: string | null;
+};
+
+type CardTypeDefinitionRow = {
+  profile_id: string;
+  card_type_id: string;
+  definition_json: string;
+  updated_at: string;
 };
 
 export class DraftStore {
@@ -239,6 +246,42 @@ export class DraftStore {
     return row?.request_fingerprint;
   }
 
+  upsertCardTypeDefinition(profileId: string, definition: CardTypeDefinition, updatedAt: string): CustomCardTypeDefinition {
+    this.db
+      .prepare(
+        `
+        INSERT INTO card_type_definitions (
+          profile_id, card_type_id, definition_json, updated_at
+        ) VALUES (?, ?, ?, ?)
+        ON CONFLICT(profile_id, card_type_id)
+        DO UPDATE SET
+          definition_json = excluded.definition_json,
+          updated_at = excluded.updated_at
+      `,
+      )
+      .run(profileId, definition.cardTypeId, JSON.stringify(definition), updatedAt);
+
+    const row = this.db
+      .prepare(`SELECT * FROM card_type_definitions WHERE profile_id = ? AND card_type_id = ?`)
+      .get(profileId, definition.cardTypeId) as CardTypeDefinitionRow;
+
+    return mapRowToCustomCardTypeDefinition(row);
+  }
+
+  getCardTypeDefinition(profileId: string, cardTypeId: string): CustomCardTypeDefinition | undefined {
+    const row = this.db
+      .prepare(`SELECT * FROM card_type_definitions WHERE profile_id = ? AND card_type_id = ?`)
+      .get(profileId, cardTypeId) as CardTypeDefinitionRow | undefined;
+    return row ? mapRowToCustomCardTypeDefinition(row) : undefined;
+  }
+
+  listCardTypeDefinitions(profileId: string): CustomCardTypeDefinition[] {
+    const rows = this.db
+      .prepare(`SELECT * FROM card_type_definitions WHERE profile_id = ? ORDER BY card_type_id ASC`)
+      .all(profileId) as CardTypeDefinitionRow[];
+    return rows.map((row) => mapRowToCustomCardTypeDefinition(row));
+  }
+
   private initialize(): void {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS drafts (
@@ -271,6 +314,14 @@ export class DraftStore {
 
       CREATE INDEX IF NOT EXISTS idx_drafts_profile_supersedes
         ON drafts(profile_id, supersedes_draft_id);
+
+      CREATE TABLE IF NOT EXISTS card_type_definitions (
+        profile_id TEXT NOT NULL,
+        card_type_id TEXT NOT NULL,
+        definition_json TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (profile_id, card_type_id)
+      );
     `);
   }
 }
@@ -314,5 +365,15 @@ function decodeCursor(cursor: string): { updatedAt: string; draftId: string } {
   return {
     updatedAt: parsed.updatedAt,
     draftId: parsed.draftId,
+  };
+}
+
+function mapRowToCustomCardTypeDefinition(row: CardTypeDefinitionRow): CustomCardTypeDefinition {
+  const definition = JSON.parse(row.definition_json) as CardTypeDefinition;
+  return {
+    ...definition,
+    source: 'custom',
+    profileId: row.profile_id,
+    updatedAt: row.updated_at,
   };
 }

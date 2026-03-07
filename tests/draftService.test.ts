@@ -20,7 +20,7 @@ afterEach(() => {
 function createService() {
   const store = new DraftStore(dbPath);
   const gateway = new MemoryGateway();
-  const service = new DraftService(store, new CatalogService(), gateway, {
+  const service = new DraftService(store, new CatalogService(store), gateway, {
     activeProfileId: 'default',
     stagedMarkerTag: '__mcp_staged',
   });

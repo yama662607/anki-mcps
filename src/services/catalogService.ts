@@ -1,10 +1,12 @@
 import { AppError } from '../contracts/errors.js';
 import { CARD_TYPES, CATALOG_VERSION, findCardType } from '../contracts/catalog.js';
-import type { CardTypeSummary, ValidationIssue } from '../contracts/types.js';
+import type { CardTypeDefinition, CardTypeSummary, ValidationIssue } from '../contracts/types.js';
+import { DraftStore } from '../persistence/draftStore.js';
 import { normalizeTags, sortRecord } from '../utils/canonical.js';
 import { sanitizeByPolicy } from '../utils/sanitize.js';
 
 export type ValidateFieldsInput = {
+  profileId: string;
   cardTypeId: string;
   fields: Record<string, string>;
   tags?: string[];
@@ -27,47 +29,32 @@ export type ValidateFieldsOutput = {
 };
 
 export class CatalogService {
-  listCardTypes(): { catalogVersion: string; cardTypes: CardTypeSummary[] } {
+  constructor(private readonly store: DraftStore) {}
+
+  listCardTypes(profileId: string): { catalogVersion: string; cardTypes: CardTypeSummary[] } {
+    const builtins = CARD_TYPES.map((cardType) => this.toSummary(cardType));
+    const customs = this.store.listCardTypeDefinitions(profileId).map((cardType) => this.toSummary(cardType));
     return {
       catalogVersion: CATALOG_VERSION,
-      cardTypes: CARD_TYPES.map((cardType) => ({
-        cardTypeId: cardType.cardTypeId,
-        label: cardType.label,
-        modelName: cardType.modelName,
-        defaultDeck: cardType.defaultDeck,
-        requiredFields: cardType.requiredFields,
-        renderIntent: cardType.renderIntent,
-        allowedHtmlPolicy: cardType.allowedHtmlPolicy,
-      })),
+      cardTypes: [...builtins, ...customs],
     };
   }
 
-  getCardTypeSchema(cardTypeId: string) {
-    const cardType = findCardType(cardTypeId);
-    if (!cardType) {
-      throw new AppError('NOT_FOUND', `Unknown cardTypeId: ${cardTypeId}`);
-    }
+  getCardTypeSchema(profileId: string, cardTypeId: string) {
+    const cardType = this.requireCardType(profileId, cardTypeId);
     return {
       catalogVersion: CATALOG_VERSION,
-      cardType: {
-        cardTypeId: cardType.cardTypeId,
-        label: cardType.label,
-        modelName: cardType.modelName,
-        defaultDeck: cardType.defaultDeck,
-        requiredFields: cardType.requiredFields,
-        renderIntent: cardType.renderIntent,
-        allowedHtmlPolicy: cardType.allowedHtmlPolicy,
-      },
+      cardType: this.toSummary(cardType),
       fields: cardType.fields,
     };
   }
 
-  validateFields(input: ValidateFieldsInput): ValidateFieldsOutput {
-    const cardType = findCardType(input.cardTypeId);
-    if (!cardType) {
-      throw new AppError('NOT_FOUND', `Unknown cardTypeId: ${input.cardTypeId}`);
-    }
+  getCardTypeDefinition(profileId: string, cardTypeId: string): CardTypeDefinition {
+    return this.requireCardType(profileId, cardTypeId);
+  }
 
+  validateFields(input: ValidateFieldsInput): ValidateFieldsOutput {
+    const cardType = this.requireCardType(input.profileId, input.cardTypeId);
     const errors: ValidationIssue[] = [];
     const warnings: ValidationIssue[] = [];
 
@@ -145,5 +132,68 @@ export class CatalogService {
       errors,
       warnings,
     };
+  }
+
+  upsertCustomCardTypeDefinition(profileId: string, definition: CardTypeDefinition) {
+    if (findCardType(definition.cardTypeId)) {
+      throw new AppError('CONFLICT', `Builtin cardTypeId cannot be overridden: ${definition.cardTypeId}`, {
+        hint: 'Choose a new custom cardTypeId instead of shadowing builtin behavior.',
+      });
+    }
+
+    this.assertDefinition(definition);
+    const updatedAt = new Date().toISOString();
+    return this.store.upsertCardTypeDefinition(profileId, {
+      ...definition,
+      source: 'custom',
+    }, updatedAt);
+  }
+
+  private requireCardType(profileId: string, cardTypeId: string): CardTypeDefinition {
+    const custom = this.store.getCardTypeDefinition(profileId, cardTypeId);
+    if (custom) {
+      return custom;
+    }
+
+    const builtin = findCardType(cardTypeId);
+    if (builtin) {
+      return builtin;
+    }
+
+    throw new AppError('NOT_FOUND', `Unknown cardTypeId: ${cardTypeId}`);
+  }
+
+  private toSummary(cardType: CardTypeDefinition): CardTypeSummary {
+    return {
+      cardTypeId: cardType.cardTypeId,
+      label: cardType.label,
+      modelName: cardType.modelName,
+      defaultDeck: cardType.defaultDeck,
+      requiredFields: cardType.requiredFields,
+      renderIntent: cardType.renderIntent,
+      allowedHtmlPolicy: cardType.allowedHtmlPolicy,
+      source: cardType.source,
+    };
+  }
+
+  private assertDefinition(definition: CardTypeDefinition): void {
+    const fieldNames = definition.fields.map((field) => field.name);
+    const allFieldNames = new Set(fieldNames);
+
+    if (fieldNames.length !== allFieldNames.size) {
+      throw new AppError('INVALID_ARGUMENT', 'Card type definition contains duplicate field names');
+    }
+
+    for (const requiredField of definition.requiredFields) {
+      if (!allFieldNames.has(requiredField)) {
+        throw new AppError('INVALID_ARGUMENT', `requiredFields references unknown field: ${requiredField}`);
+      }
+    }
+
+    for (const optionalField of definition.optionalFields) {
+      if (!allFieldNames.has(optionalField)) {
+        throw new AppError('INVALID_ARGUMENT', `optionalFields references unknown field: ${optionalField}`);
+      }
+    }
   }
 }

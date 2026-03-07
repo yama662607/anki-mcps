@@ -7,6 +7,7 @@ import { MemoryGateway } from './gateway/memoryGateway.js';
 import { DraftStore } from './persistence/draftStore.js';
 import { CatalogService } from './services/catalogService.js';
 import { DraftService } from './services/draftService.js';
+import { NoteTypeService } from './services/noteTypeService.js';
 import { registerMcpHandlers } from './mcp/register.js';
 
 export type AppRuntime = {
@@ -26,11 +27,12 @@ export function createRuntime(): AppRuntime {
   const gateway = gatewayMode === 'memory' ? new MemoryGateway() : new AnkiConnectGateway();
 
   const store = new DraftStore(dbPath);
-  const catalogService = new CatalogService();
+  const catalogService = new CatalogService(store);
   const draftService = new DraftService(store, catalogService, gateway, {
     activeProfileId,
     stagedMarkerTag,
   });
+  const noteTypeService = new NoteTypeService(gateway, { activeProfileId });
 
   const server = new McpServer(
     {
@@ -40,13 +42,14 @@ export function createRuntime(): AppRuntime {
     {
       instructions: [
         'Use this flow for card creation: list_card_types -> get_card_type_schema -> validate_card_fields -> create_staged_card -> open_staged_card_preview -> commit_staged_card or discard_staged_card.',
+        'Use note-type authoring as: list_note_types -> get_note_type_schema -> upsert_note_type(dryRun=true) -> upsert_note_type(dryRun=false) -> upsert_card_type_definition.',
         'Never commit without explicit user approval in natural language.',
         'Write tools require explicit profileId and create_staged_card requires clientRequestId.',
       ].join(' '),
     },
   );
 
-  registerMcpHandlers(server, { catalogService, draftService });
+  registerMcpHandlers(server, { catalogService, draftService, noteTypeService });
 
   return { server, store };
 }

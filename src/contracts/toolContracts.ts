@@ -19,7 +19,7 @@ export const TOOL_CONTRACTS_V1 = {
   sharedTypes: {
     CardTypeSummary: {
       type: 'object',
-      required: ['cardTypeId', 'label', 'modelName', 'defaultDeck', 'requiredFields', 'renderIntent', 'allowedHtmlPolicy'],
+      required: ['cardTypeId', 'label', 'modelName', 'defaultDeck', 'requiredFields', 'renderIntent', 'allowedHtmlPolicy', 'source'],
       additionalProperties: false,
       properties: {
         cardTypeId: { type: 'string' },
@@ -29,6 +29,7 @@ export const TOOL_CONTRACTS_V1 = {
         requiredFields: { type: 'array', items: { type: 'string' } },
         renderIntent: { enum: ['recognition', 'production', 'cloze', 'mixed'] },
         allowedHtmlPolicy: { enum: ['plain_text_only', 'safe_inline_html', 'trusted_html'] },
+        source: { enum: ['builtin', 'custom'] },
       },
     },
     FieldSchema: {
@@ -116,6 +117,53 @@ export const TOOL_CONTRACTS_V1 = {
         updatedAt: { type: 'string' },
       },
     },
+    NoteTypeSummary: {
+      type: 'object',
+      required: ['modelName', 'fieldNames', 'templateNames', 'isCloze'],
+      additionalProperties: false,
+      properties: {
+        modelName: { type: 'string' },
+        fieldNames: { type: 'array', items: { type: 'string' } },
+        templateNames: { type: 'array', items: { type: 'string' } },
+        isCloze: { type: 'boolean' },
+      },
+    },
+    NoteTypeSchema: {
+      type: 'object',
+      required: ['modelName', 'fields', 'templates', 'css', 'fieldsOnTemplates', 'isCloze'],
+      additionalProperties: false,
+      properties: {
+        modelName: { type: 'string' },
+        fields: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['name'],
+            additionalProperties: false,
+            properties: {
+              name: { type: 'string' },
+              description: { type: 'string' },
+            },
+          },
+        },
+        templates: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['name', 'front', 'back'],
+            additionalProperties: false,
+            properties: {
+              name: { type: 'string' },
+              front: { type: 'string' },
+              back: { type: 'string' },
+            },
+          },
+        },
+        css: { type: 'string' },
+        fieldsOnTemplates: { type: 'object' },
+        isCloze: { type: 'boolean' },
+      },
+    },
   },
   tools: {
     list_card_types: {
@@ -133,6 +181,86 @@ export const TOOL_CONTRACTS_V1 = {
           ...baseResponse.properties,
           catalogVersion: { type: 'string' },
           cardTypes: { type: 'array', items: { $ref: '#/sharedTypes/CardTypeSummary' } },
+        },
+      },
+    },
+    list_note_types: {
+      request: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          profileId: { type: 'string' },
+        },
+      },
+      response: {
+        ...baseResponse,
+        required: [...baseResponse.required, 'noteTypes'],
+        properties: {
+          ...baseResponse.properties,
+          noteTypes: { type: 'array', items: { $ref: '#/sharedTypes/NoteTypeSummary' } },
+        },
+      },
+    },
+    get_note_type_schema: {
+      request: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['modelName'],
+        properties: {
+          modelName: { type: 'string' },
+          profileId: { type: 'string' },
+        },
+      },
+      response: {
+        ...baseResponse,
+        required: [...baseResponse.required, 'noteType'],
+        properties: {
+          ...baseResponse.properties,
+          noteType: { $ref: '#/sharedTypes/NoteTypeSchema' },
+        },
+      },
+    },
+    upsert_note_type: {
+      request: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['profileId', 'modelName', 'fields', 'templates'],
+        properties: {
+          profileId: { type: 'string' },
+          modelName: { type: 'string' },
+          fields: { type: 'array' },
+          templates: { type: 'array' },
+          css: { type: 'string' },
+          isCloze: { type: 'boolean' },
+          dryRun: { type: 'boolean' },
+        },
+      },
+      response: {
+        ...baseResponse,
+        required: [...baseResponse.required, 'dryRun', 'result'],
+        properties: {
+          ...baseResponse.properties,
+          dryRun: { type: 'boolean' },
+          result: { type: 'object' },
+        },
+      },
+    },
+    upsert_card_type_definition: {
+      request: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['profileId', 'definition'],
+        properties: {
+          profileId: { type: 'string' },
+          definition: { type: 'object' },
+        },
+      },
+      response: {
+        ...baseResponse,
+        required: [...baseResponse.required, 'cardType'],
+        properties: {
+          ...baseResponse.properties,
+          cardType: { type: 'object' },
         },
       },
     },
