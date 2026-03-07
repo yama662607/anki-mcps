@@ -217,4 +217,47 @@ describe('AnkiConnectGateway', () => {
     expect(error).toBeInstanceOf(AppError);
     expect((error as AppError).code).toBe('DEPENDENCY_UNAVAILABLE');
   });
+
+  it('wraps fetch connection failures as DEPENDENCY_UNAVAILABLE', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('connect ECONNREFUSED');
+      }),
+    );
+
+    const gateway = new AnkiConnectGateway('http://127.0.0.1:8765');
+
+    let error: unknown;
+    try {
+      await gateway.listNoteTypes();
+    } catch (caught) {
+      error = caught;
+    }
+
+    expect(error).toBeInstanceOf(AppError);
+    expect((error as AppError).code).toBe('DEPENDENCY_UNAVAILABLE');
+  });
+
+  it('wraps non-200 responses as DEPENDENCY_UNAVAILABLE', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 500,
+      }) as Response),
+    );
+
+    const gateway = new AnkiConnectGateway('http://127.0.0.1:8765');
+
+    let error: unknown;
+    try {
+      await gateway.listNoteTypes();
+    } catch (caught) {
+      error = caught;
+    }
+
+    expect(error).toBeInstanceOf(AppError);
+    expect((error as AppError).code).toBe('DEPENDENCY_UNAVAILABLE');
+  });
 });

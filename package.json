@@ -10,9 +10,11 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:mcp": "vitest run tests/mcpServer.test.ts",
     "test:watch": "vitest",
     "dev": "tsx src/index.ts",
-    "start": "node dist/src/index.js"
+    "start": "node dist/src/index.js",
+    "e2e:anki": "node scripts/e2e-real-anki.mjs"
   },
   "engines": {
     "node": ">=22"

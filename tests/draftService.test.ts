@@ -268,4 +268,49 @@ describe('DraftService', () => {
 
     store.close();
   });
+
+  it('creates staged draft from a custom card type definition', async () => {
+    const store = new DraftStore(dbPath);
+    const gateway = new MemoryGateway();
+
+    const catalog = new CatalogService(store);
+    catalog.upsertCustomCardTypeDefinition('default', {
+      cardTypeId: 'programming.v1.ts-concept',
+      label: 'TypeScript Concept',
+      modelName: 'ts.v1.concept',
+      defaultDeck: 'Programming::TypeScript::Concept',
+      source: 'custom',
+      requiredFields: ['Prompt', 'Answer'],
+      optionalFields: ['DetailedExplanation'],
+      renderIntent: 'production',
+      allowedHtmlPolicy: 'safe_inline_html',
+      fields: [
+        { name: 'Prompt', required: true, type: 'text', allowedHtmlPolicy: 'safe_inline_html' },
+        { name: 'Answer', required: true, type: 'text', allowedHtmlPolicy: 'safe_inline_html' },
+        { name: 'DetailedExplanation', required: false, type: 'markdown', allowedHtmlPolicy: 'safe_inline_html', multiline: true },
+      ],
+    });
+
+    const customService = new DraftService(store, catalog, gateway, {
+      activeProfileId: 'default',
+      stagedMarkerTag: '__mcp_staged',
+    });
+
+    const staged = await customService.createStagedCard({
+      profileId: 'default',
+      clientRequestId: 'req-custom-1',
+      cardTypeId: 'programming.v1.ts-concept',
+      fields: {
+        Prompt: 'any と unknown の違いは？',
+        Answer: 'unknown は絞り込みが必要。',
+        DetailedExplanation: '詳細',
+      },
+    });
+
+    expect(staged.draft.cardTypeId).toBe('programming.v1.ts-concept');
+    expect(staged.draft.deckName).toBe('Programming::TypeScript::Concept');
+    expect(staged.draft.fields.Prompt).toBe('any と unknown の違いは？');
+
+    store.close();
+  });
 });

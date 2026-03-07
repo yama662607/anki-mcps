@@ -8,11 +8,15 @@ Implemented test suites:
 - `tests/draftService.test.ts`
 - `tests/noteTypeService.test.ts`
 - `tests/ankiConnectGateway.test.ts`
+- `tests/mcpServer.test.ts`
 
 Coverage includes:
 - schema/sanitizer behavior
 - note-type discovery, dry-run, additive-safe update, and dependency failure wrapping
+- AnkiConnect connection failure and HTTP failure wrapping
 - staged creation and idempotent retry
+- staged creation from custom card type definitions
+- MCP tool registration, annotations, resources, and end-to-end in-memory tool execution
 - commit idempotency
 - conflict detection after manual edit
 - supersede behavior
@@ -32,6 +36,7 @@ Planned end-to-end checks:
 - create staged draft -> open preview -> confirm -> commit
 - create staged draft -> preview -> user correction -> supersede -> commit latest
 - GUI unavailable path returns recoverable structured error
+- semi-automated real Anki script: `docs/implementation/e2e-real-anki.md`
 
 ## 5.4 duplicate commit / orphan prevention
 
