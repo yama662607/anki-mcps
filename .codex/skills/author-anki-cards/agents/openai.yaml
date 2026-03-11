@@ -1,0 +1,4 @@
+interface:
+  display_name: "Author Anki Cards"
+  short_description: "Operate anki-mcps safely for card authoring"
+  default_prompt: "Use $author-anki-cards to create or revise Anki note types, card types, and staged cards safely."

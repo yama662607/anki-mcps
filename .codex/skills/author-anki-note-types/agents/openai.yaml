@@ -1,0 +1,4 @@
+interface:
+  display_name: "Author Anki Note Types"
+  short_description: "Design note types and card type definitions"
+  default_prompt: "Use $author-anki-note-types to create or revise Anki note types and custom card type definitions safely."

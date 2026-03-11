@@ -1,5 +1,11 @@
 # Local assistant metadata
-.codex/
+.codex/*
+!.codex/skills/
+.codex/skills/*
+!.codex/skills/author-anki-cards/
+!.codex/skills/author-anki-cards/**
+!.codex/skills/author-anki-note-types/
+!.codex/skills/author-anki-note-types/**
 
 # Reference clones used for local benchmark/research
 clones/
