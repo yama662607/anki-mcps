@@ -12,10 +12,9 @@ Current applied stack:
 1. `upsert_note_type` (`dryRun=true`)
 2. `upsert_note_type` (`dryRun=false`)
 3. `upsert_card_type_definition`
-4. `validate_card_fields`
-5. `create_staged_card`
-6. `open_staged_card_preview`
-7. `commit_staged_card`
+4. `create_draft`
+5. `open_draft_preview`
+6. `commit_draft`
 
 ## 1) Bootstrap `ts.v1.concept`
 
@@ -69,7 +68,7 @@ Current applied stack:
 
 ## 2) Concept card
 
-### `create_staged_card`
+### `create_draft`
 ```json
 {
   "profileId": "local-main",
@@ -89,7 +88,7 @@ Current applied stack:
 
 ## 3) Output card
 
-### `create_staged_card`
+### `create_draft`
 ```json
 {
   "profileId": "local-main",
@@ -108,7 +107,7 @@ Current applied stack:
 
 ## 4) Debug card
 
-### `create_staged_card`
+### `create_draft`
 ```json
 {
   "profileId": "local-main",
@@ -128,7 +127,7 @@ Current applied stack:
 
 ## Review and commit
 
-After `create_staged_card`, call:
+After `create_draft`, call:
 
 ```json
 {

@@ -110,7 +110,7 @@ export const TOOL_CONTRACTS_V1 = {
         'deckName',
         'modTimestamp',
         'clientRequestId',
-        'stagedMarkerTag',
+        'draftMarkerTag',
         'createdAt',
         'updatedAt',
       ],
@@ -120,7 +120,7 @@ export const TOOL_CONTRACTS_V1 = {
         profileId: { type: 'string' },
         noteId: { type: 'number' },
         cardIds: { type: 'array', items: { type: 'number' } },
-        state: { enum: ['staged', 'superseded', 'committed', 'discarded'] },
+        state: { enum: ['draft', 'superseded', 'committed', 'discarded'] },
         cardTypeId: { type: 'string' },
         fingerprint: { type: 'string' },
         supersedesDraftId: { type: 'string' },
@@ -130,7 +130,7 @@ export const TOOL_CONTRACTS_V1 = {
         deckName: { type: 'string' },
         modTimestamp: { type: 'number' },
         clientRequestId: { type: 'string' },
-        stagedMarkerTag: { type: 'string' },
+        draftMarkerTag: { type: 'string' },
         createdAt: { type: 'string' },
         updatedAt: { type: 'string' },
         committedAt: { type: 'string' },
@@ -144,7 +144,7 @@ export const TOOL_CONTRACTS_V1 = {
       properties: {
         draftId: { type: 'string' },
         noteId: { type: 'number' },
-        state: { enum: ['staged', 'superseded', 'committed', 'discarded'] },
+        state: { enum: ['draft', 'superseded', 'committed', 'discarded'] },
         cardTypeId: { type: 'string' },
         supersedesDraftId: { type: 'string' },
         chainDepth: { type: 'number' },
@@ -357,33 +357,7 @@ export const TOOL_CONTRACTS_V1 = {
         },
       },
     },
-    validate_card_fields: {
-      request: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['cardTypeId', 'fields'],
-        properties: {
-          cardTypeId: { type: 'string' },
-          profileId: { type: 'string' },
-          fields: { type: 'object', additionalProperties: { type: 'string' } },
-          tags: { type: 'array', items: { type: 'string' } },
-          deckName: { type: 'string' },
-        },
-      },
-      response: {
-        ...baseResponse,
-        required: [...baseResponse.required, 'valid', 'normalized', 'sanitization', 'errors', 'warnings'],
-        properties: {
-          ...baseResponse.properties,
-          valid: { type: 'boolean' },
-          normalized: { type: 'object' },
-          sanitization: { type: 'object' },
-          errors: { type: 'array', items: { $ref: '#/sharedTypes/ValidationIssue' } },
-          warnings: { type: 'array', items: { $ref: '#/sharedTypes/ValidationIssue' } },
-        },
-      },
-    },
-    create_staged_card: {
+    create_draft: {
       request: {
         type: 'object',
         additionalProperties: false,
@@ -407,7 +381,7 @@ export const TOOL_CONTRACTS_V1 = {
         },
       },
     },
-    create_staged_cards_batch: {
+    create_drafts_batch: {
       request: {
         type: 'object',
         additionalProperties: false,
@@ -435,7 +409,7 @@ export const TOOL_CONTRACTS_V1 = {
         },
       },
     },
-    get_staged_card: {
+    get_draft: {
       request: {
         type: 'object',
         additionalProperties: false,
@@ -455,7 +429,7 @@ export const TOOL_CONTRACTS_V1 = {
         },
       },
     },
-    open_staged_card_preview: {
+    open_draft_preview: {
       request: {
         type: 'object',
         additionalProperties: false,
@@ -475,7 +449,7 @@ export const TOOL_CONTRACTS_V1 = {
         },
       },
     },
-    commit_staged_card: {
+    commit_draft: {
       request: {
         type: 'object',
         additionalProperties: false,
@@ -495,7 +469,7 @@ export const TOOL_CONTRACTS_V1 = {
         },
       },
     },
-    commit_staged_cards_batch: {
+    commit_drafts_batch: {
       request: {
         type: 'object',
         additionalProperties: false,
@@ -523,7 +497,7 @@ export const TOOL_CONTRACTS_V1 = {
         },
       },
     },
-    discard_staged_card: {
+    discard_draft: {
       request: {
         type: 'object',
         additionalProperties: false,
@@ -543,7 +517,7 @@ export const TOOL_CONTRACTS_V1 = {
         },
       },
     },
-    discard_staged_cards_batch: {
+    discard_drafts_batch: {
       request: {
         type: 'object',
         additionalProperties: false,
@@ -571,13 +545,13 @@ export const TOOL_CONTRACTS_V1 = {
         },
       },
     },
-    list_staged_cards: {
+    list_drafts: {
       request: {
         type: 'object',
         additionalProperties: false,
         properties: {
           profileId: { type: 'string' },
-          states: { type: 'array', items: { enum: ['staged', 'superseded', 'committed', 'discarded'] } },
+          states: { type: 'array', items: { enum: ['draft', 'superseded', 'committed', 'discarded'] } },
           limit: { type: 'number' },
           cursor: { type: 'string' },
         },
@@ -592,7 +566,7 @@ export const TOOL_CONTRACTS_V1 = {
         },
       },
     },
-    cleanup_staged_cards: {
+    cleanup_drafts: {
       request: {
         type: 'object',
         additionalProperties: false,
@@ -600,7 +574,7 @@ export const TOOL_CONTRACTS_V1 = {
         properties: {
           profileId: { type: 'string' },
           olderThanHours: { type: 'number' },
-          states: { type: 'array', items: { enum: ['staged', 'superseded'] } },
+          states: { type: 'array', items: { enum: ['draft', 'superseded'] } },
         },
       },
       response: {

@@ -1,6 +1,6 @@
 ## Context
 
-本プロジェクトは、語学学習・プログラミング学習・基礎知識暗記向けに、用途別カードタイプを選んで安全にAnkiへ追加するMCPサーバーを設計する。既存のAnki MCP実装は、(a) 低レベルAPIの列挙が中心、または (b) 高レベル操作があるが「追加前確認」と「確定/破棄」の境界が弱いものが多い。今回はこの弱点を補い、`staging -> GUI確認 -> commit/discard` を第一級の契約として設計する。
+本プロジェクトは、語学学習・プログラミング学習・基礎知識暗記向けに、用途別カードタイプを選んで安全にAnkiへ追加するMCPサーバーを設計する。既存のAnki MCP実装は、(a) 低レベルAPIの列挙が中心、または (b) 高レベル操作があるが「追加前確認」と「確定/破棄」の境界が弱いものが多い。今回はこの弱点を補い、`draft -> GUI確認 -> commit/discard` を第一級の契約として設計する。
 
 制約:
 - 最終表示確認はAnki GUIを正とする（MCP側HTMLレンダリングは非採用）
@@ -23,14 +23,14 @@
 ## Decisions
 
 ### 1) ツール分割はハイブリッド戦略を採用する
-- 決定: `list/get/validate/preview` は高レベル、`commit/discard` は明示分離
+- 決定: `list/get/create/preview` は高レベル、`commit/discard` は明示分離
 - 理由: 分割しすぎると呼び出し回数が増えるが、統合しすぎると事故時の切り分けと権限境界が曖昧になるため
 - 代替案:
   - 全分割: 安全だがUXが重い
   - 全統合: UXは軽いが誤操作時の被害が大きい
 
 ### 2) ステージングを正規ライフサイクルとして扱う
-- 決定: `draftId` を中心に `staged/committed/discarded` 状態を管理する
+- 決定: `draftId` を中心に `draft/committed/discarded` 状態を管理する
 - 理由: セッション断やGUI失敗時でも復旧可能にし、運用時の信頼性を上げるため
 - 代替案:
   - 即時追加のみ: 実装は簡単だが確認フローの品質が低い
@@ -52,7 +52,7 @@
 - 理由: ツール数や機能数だけで比較すると、運用品質が担保されないため
 
 ### 6) draftメタデータ永続化はSQLiteを採用する
-- 決定: staged lifecycleの永続メタデータはSQLiteに保存する
+- 決定: draft lifecycleの永続メタデータはSQLiteに保存する
 - 理由: `draftId` の一意制約、状態遷移の原子性、マルチプロファイル分離、監査クエリ、将来の移行・集計を低コストで実現できるため
 - 代替案:
   - JSONL: 実装は簡単だが、競合・重複・部分書き込み回復・複雑検索が弱い
@@ -71,7 +71,7 @@
   - 無条件commit: 競合を見落として意図しない状態を確定しやすい
 
 ### 9) cleanupのデフォルト閾値は72時間とする
-- 決定: `cleanup_staged_cards` のデフォルトを 72h に設定する
+- 決定: `cleanup_drafts` のデフォルトを 72h に設定する
 - 理由: 短すぎるとレビュー中断に弱く、長すぎるとステージ汚染が進むため
 - 代替案:
   - 24h: クリーンだが中断復帰に厳しい
@@ -96,7 +96,7 @@
   - 自由形式エラー: 実装は早いが自動復旧しにくい
 
 ### 13) 状態遷移表を実装契約にする
-- 決定: `staged -> committed|discarded|superseded`, `superseded -> discarded` のみ許可し、その他遷移は拒否する
+- 決定: `draft -> committed|discarded|superseded`, `superseded -> discarded` のみ許可し、その他遷移は拒否する
 - 理由: ライフサイクル不整合とダブルコミット事故を防ぐため
 - 代替案:
   - 暗黙遷移: 柔軟だが監査とテストが難しい
@@ -114,7 +114,7 @@
   - 単純なtimestampのみ比較: 実装は容易だが誤検知/見逃しが増える
 
 ### 16) supersedeの成立条件を固定する
-- 決定: `supersedesDraftId` は `staged` 状態のみ受理し、旧draftを `superseded` に遷移、直接commitは禁止する
+- 決定: `supersedesDraftId` は `draft` 状態のみ受理し、旧draftを `superseded` に遷移、直接commitは禁止する
 - 理由: ユーザーフィードバック反映時の作り直しを安全にトレース可能にするため
 - 代替案:
   - 任意状態をsupersede可: 柔軟だがチェーン整合性が崩れやすい
@@ -133,7 +133,7 @@
   - 手順のみ推奨して強制しない: UXは軽いが誤確定の再発防止が弱い
 
 ### 19) SQLiteスキーマと保持期間を設計段階で固定する
-- 決定: `drafts` テーブルを中核に、`(profileId, draftId)` 一意制約、`(profileId, state, updatedAt)` / `(profileId, supersedesDraftId)` インデックス、`staged/superseded=72h`, `committed/discarded=30d` 保持を採用する
+- 決定: `drafts` テーブルを中核に、`(profileId, draftId)` 一意制約、`(profileId, state, updatedAt)` / `(profileId, supersedesDraftId)` インデックス、`draft/superseded=72h`, `committed/discarded=30d` 保持を採用する
 - 理由: 実装者間の解釈差を排除し、cleanupと監査を予測可能にするため
 - 代替案:
   - 実装時に都度決定: 初期速度は出るが移行コストと不整合リスクが高い
@@ -145,14 +145,14 @@
 - 代替案:
   - 定性比較のみ: 判断がレビュー担当者依存になりやすい
 
-### 21) stagedカードの学習混入を禁止する
-- 決定: `create_staged_card` 時に staged専用タグを必須付与し、学習キューから除外する。`commit` で解除、`discard` で削除する
+### 21) draftカードの学習混入を禁止する
+- 決定: `create_draft` 時に draft専用タグを必須付与し、学習キューから除外する。`commit` で解除、`discard` で削除する
 - 理由: 下書きの誤出題は学習品質と運用信頼性を直接損なうため
 - 代替案:
   - タグ付与のみで除外しない: 実運用で混入事故が残る
 
-### 22) create_staged_cardの冪等キーを必須化する
-- 決定: `clientRequestId` を `create_staged_card` の必須入力にし、同一`profileId + clientRequestId` の再送は同一draftを返す
+### 22) create_draftの冪等キーを必須化する
+- 決定: `clientRequestId` を `create_draft` の必須入力にし、同一`profileId + clientRequestId` の再送は同一draftを返す
 - 理由: 通信再試行やエージェント再実行で重複下書きを作らないため
 - 代替案:
   - サーバ側の曖昧重複判定: 実装差と誤判定が増える
@@ -200,23 +200,7 @@
   - `cardType: CardTypeSummary`
   - `fields: FieldSchema[]`
 
-### validate_card_fields
-- request:
-  - `cardTypeId: string`
-  - `profileId?: string`
-  - `fields:  Record<string, string>`
-  - `tags?: string[]`
-  - `deckName?: string`
-- response:
-  - `contractVersion: "1.0.0"`
-  - `profileId: string`
-  - `valid: boolean`
-  - `normalized: { fields: Record<string, string>, tags: string[], deckName: string }`
-  - `sanitization: { policyByField: Record<string, "plain_text_only" | "safe_inline_html" | "trusted_html">, modifiedFields: string[] }`
-  - `errors: ValidationIssue[]`
-  - `warnings: ValidationIssue[]`
-
-### create_staged_card
+### create_draft
 - request:
   - `cardTypeId: string`
   - `profileId: string`
@@ -230,7 +214,7 @@
   - `profileId: string`
   - `draft: DraftRecord`
 
-### open_staged_card_preview
+### open_draft_preview
 - request:
   - `draftId: string`
   - `profileId?: string`
@@ -240,7 +224,7 @@
   - `draftId: string`
   - `preview: { opened: boolean, selectedNoteId: number, selectedCardIds: number[], browserQuery: string }`
 
-### commit_staged_card
+### commit_draft
 - request:
   - `draftId: string`
   - `profileId: string`
@@ -250,7 +234,7 @@
   - `profileId: string`
   - `result: { status: "committed" | "already_committed", draftId: string, noteId: number, cardIds: number[], committedAt: string }`
 
-### discard_staged_card
+### discard_draft
 - request:
   - `draftId: string`
   - `profileId: string`
@@ -260,10 +244,10 @@
   - `profileId: string`
   - `result: { status: "discarded" | "already_discarded", draftId: string, discardedAt: string, deletedNoteId?: number }`
 
-### list_staged_cards
+### list_drafts
 - request:
   - `profileId?: string`
-  - `states?: Array<"staged" | "superseded" | "committed" | "discarded">`
+  - `states?: Array<"draft" | "superseded" | "committed" | "discarded">`
   - `limit?: number` (`1..200`, default `50`)
   - `cursor?: string`
 - response:
@@ -272,11 +256,11 @@
   - `items: DraftListItem[]`
   - `nextCursor?: string`
 
-### cleanup_staged_cards
+### cleanup_drafts
 - request:
   - `profileId: string`
   - `olderThanHours?: number` (default `72`)
-  - `states?: Array<"staged" | "superseded">`
+  - `states?: Array<"draft" | "superseded">`
 - response:
   - `contractVersion: "1.0.0"`
   - `profileId: string`
@@ -312,7 +296,7 @@
   - `draftId: string`
   - `noteId: number`
   - `cardIds: number[]`
-  - `state: "staged"`
+  - `state: "draft"`
   - `cardTypeId: string`
   - `fingerprint: string`
   - `supersedesDraftId?: string`
@@ -322,7 +306,7 @@
 - `DraftListItem`:
   - `draftId: string`
   - `noteId: number`
-  - `state: "staged" | "superseded" | "committed" | "discarded"`
+  - `state: "draft" | "superseded" | "committed" | "discarded"`
   - `cardTypeId: string`
   - `supersedesDraftId?: string`
   - `chainDepth: number`
@@ -335,7 +319,7 @@
   - Mitigation: GUIを使うE2Eと非GUI契約テストを分離し、CIではヘッドレス可否に応じたレイヤー運用にする
 
 - [Risk] ステージング状態とAnki実体の不整合
-  - Mitigation: `list_staged_cards` と整合性チェックジョブ、`cleanup_staged_cards` を必須化する
+  - Mitigation: `list_drafts` と整合性チェックジョブ、`cleanup_drafts` を必須化する
 
 - [Risk] カタログ肥大化でメンテナンス負荷増大
   - Mitigation: カタログ定義をスキーマ化し、CIでlint/validationを行う
@@ -350,7 +334,7 @@
 
 1. Phase 0: OpenSpecにproposal/specs/design/tasksを確定
 2. Phase 1: カタログとvalidationの実装
-3. Phase 2: staged lifecycle（create/list/commit/discard/cleanup）実装
+3. Phase 2: draft lifecycle（create/list/commit/discard/cleanup）実装
 4. Phase 3: GUI preview統合とエラーモデル統一
 5. Phase 4: 契約テスト・統合テスト・回帰テストをCIに組み込み
 

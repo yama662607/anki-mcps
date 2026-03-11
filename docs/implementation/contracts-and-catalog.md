@@ -21,10 +21,10 @@
 - Additional authoring tools:
   - `list_card_type_definitions`
   - `deprecate_card_type_definition`
-  - `get_staged_card`
-  - `create_staged_cards_batch`
-  - `commit_staged_cards_batch`
-  - `discard_staged_cards_batch`
+  - `get_draft`
+  - `create_drafts_batch`
+  - `commit_drafts_batch`
+  - `discard_drafts_batch`
 
 ## 1.4 validation error/warning model
 
@@ -51,14 +51,14 @@ Each card type includes:
 - `trusted_html`: pass-through
 - Implementation: `src/utils/sanitize.ts`
 
-## 2.x staged lifecycle contracts
+## 2.x draft lifecycle contracts
 
-- State model and transitions: `staged -> committed|discarded|superseded`, `superseded -> discarded`
+- State model and transitions: `draft -> committed|discarded|superseded`, `superseded -> discarded`
 - Idempotent create: required `clientRequestId` with payload fingerprint
 - Conflict detection: canonical fingerprint over model/fields/tags/profile/note/modTimestamp
-- Supersede workflow: source must be `staged`; old draft becomes `superseded`
+- Supersede workflow: source must be `draft`; old draft becomes `superseded`
 - Cleanup default: `72` hours
-- Study isolation: staged notes are suspended until commit
+- Study isolation: draft notes are suspended until commit
 - Batch operations are per-item and allow mixed success/failure in one response
 - Implementation: `src/services/draftService.ts`, `src/persistence/draftStore.ts`
 
@@ -69,4 +69,4 @@ Each card type includes:
 - `upsert_card_type_definition` reactivates a deprecated definition.
 - `list_card_types` returns active custom definitions only.
 - `list_card_type_definitions(includeDeprecated=true)` exposes deprecated definitions for audit and migration.
-- `create_staged_card` rejects deprecated custom `cardTypeId` values with `CONFLICT`.
+- `create_draft` rejects deprecated custom `cardTypeId` values with `CONFLICT`.

@@ -26,10 +26,10 @@ Catalog tools MUST resolve definitions from merged sources: custom registry and 
 - **AND** does not shadow builtin behavior silently
 
 ### Requirement: Staged Creation Compatibility With Custom Types
-Existing staged-card lifecycle MUST work with custom card type definitions.
+Existing draft-card lifecycle MUST work with custom card type definitions.
 
-#### Scenario: Create staged card from custom type
-- **WHEN** the client calls `create_staged_card` with a custom `cardTypeId`
+#### Scenario: Create draft from custom type
+- **WHEN** the client calls `create_draft` with a custom `cardTypeId`
 - **THEN** validation and field normalization use the custom schema
 - **AND** the created note uses the mapped note type and default deck from that definition
 

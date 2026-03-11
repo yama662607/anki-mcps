@@ -66,7 +66,7 @@ async function runStart() {
     },
   });
 
-  const staged = await callTool('create_staged_card', {
+  const draft = await callTool('create_draft', {
     profileId,
     clientRequestId: `real-e2e-${Date.now()}`,
     cardTypeId: 'e2e.v1.basic',
@@ -76,15 +76,15 @@ async function runStart() {
     },
   });
 
-  const preview = await callTool('open_staged_card_preview', {
+  const preview = await callTool('open_draft_preview', {
     profileId,
-    draftId: staged.draft.draftId,
+    draftId: draft.draft.draftId,
   });
 
   writeFileSync(statePath, JSON.stringify({
     profileId,
-    draftId: staged.draft.draftId,
-    noteId: staged.draft.noteId,
+    draftId: draft.draft.draftId,
+    noteId: draft.draft.noteId,
     createdAt: new Date().toISOString(),
   }, null, 2));
 
@@ -93,8 +93,8 @@ async function runStart() {
     scenario: 'start',
     mode,
     statePath,
-    draftId: staged.draft.draftId,
-    noteId: staged.draft.noteId,
+    draftId: draft.draft.draftId,
+    noteId: draft.draft.noteId,
     preview: preview.preview,
     nextStep: 'Inspect the preview in Anki, then rerun with ANKI_E2E_SCENARIO=finalize and ANKI_E2E_FINALIZE=commit|discard.',
   }, null, 2));
@@ -133,7 +133,7 @@ async function runBatchStart() {
   });
 
   const now = Date.now();
-  const staged = await callTool('create_staged_cards_batch', {
+  const draft = await callTool('create_drafts_batch', {
     profileId,
     items: [
       {
@@ -151,15 +151,15 @@ async function runBatchStart() {
     ],
   });
 
-  const firstSuccess = staged.results.find((item) => item.ok);
+  const firstSuccess = draft.results.find((item) => item.ok);
   const preview = firstSuccess
-    ? await callTool('open_staged_card_preview', { profileId, draftId: firstSuccess.draft.draftId })
+    ? await callTool('open_draft_preview', { profileId, draftId: firstSuccess.draft.draftId })
     : null;
 
   writeFileSync(statePath, JSON.stringify({
     profileId,
     mode,
-    items: staged.results
+    items: draft.results
       .filter((item) => item.ok)
       .map((item) => ({ itemId: item.itemId, draftId: item.draft.draftId, noteId: item.draft.noteId })),
     createdAt: new Date().toISOString(),
@@ -170,9 +170,9 @@ async function runBatchStart() {
     scenario: 'start',
     mode,
     statePath,
-    summary: staged.summary,
+    summary: draft.summary,
     preview: preview?.preview ?? null,
-    nextStep: 'Rerun with ANKI_E2E_SCENARIO=finalize and ANKI_E2E_FINALIZE=commit|discard to finalize the staged batch.',
+    nextStep: 'Rerun with ANKI_E2E_SCENARIO=finalize and ANKI_E2E_FINALIZE=commit|discard to finalize the draft batch.',
   }, null, 2));
 }
 
@@ -182,7 +182,7 @@ async function runFinalize() {
 
   if (state.mode === 'batch') {
     if (finalize === 'commit') {
-      result = await callTool('commit_staged_cards_batch', {
+      result = await callTool('commit_drafts_batch', {
         profileId: state.profileId,
         items: state.items.map((item) => ({
           itemId: item.itemId,
@@ -197,7 +197,7 @@ async function runFinalize() {
         })),
       });
     } else {
-      result = await callTool('discard_staged_cards_batch', {
+      result = await callTool('discard_drafts_batch', {
         profileId: state.profileId,
         items: state.items.map((item) => ({
           itemId: item.itemId,
@@ -208,7 +208,7 @@ async function runFinalize() {
     }
   } else {
     if (finalize === 'commit') {
-      result = await callTool('commit_staged_card', {
+      result = await callTool('commit_draft', {
         profileId: state.profileId,
         draftId: state.draftId,
         reviewDecision: {
@@ -220,7 +220,7 @@ async function runFinalize() {
         },
       });
     } else {
-      result = await callTool('discard_staged_card', {
+      result = await callTool('discard_draft', {
         profileId: state.profileId,
         draftId: state.draftId,
         reason: 'user_request',

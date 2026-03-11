@@ -1,23 +1,22 @@
 # Card Operations
 
-## 1. Create one staged card
+## 1. Create one draft
 
 Example user request:
 - "Add one TypeScript concept card about `any` vs `unknown`."
 
 Recommended sequence:
 1. `get_card_type_schema`
-2. `validate_card_fields`
-3. `create_staged_card`
-4. `get_staged_card`
-5. `open_staged_card_preview`
-6. Wait for explicit approval
-7. `commit_staged_card` or `discard_staged_card`
+2. `create_draft`
+3. `get_draft`
+4. `open_draft_preview`
+5. Wait for explicit approval
+6. `commit_draft` or `discard_draft`
 
 Example create payload:
 ```json
 {
-  "name": "create_staged_card",
+  "name": "create_draft",
   "arguments": {
     "profileId": "y@m@ちゃん",
     "clientRequestId": "ts-concept-any-vs-unknown-001",
@@ -36,16 +35,16 @@ Example create payload:
 Use when the user says "ここを変更してください" after preview.
 
 Pattern:
-1. `get_staged_card`
+1. `get_draft`
 2. build corrected fields
-3. call `create_staged_card` with a new `clientRequestId` and `supersedesDraftId`
+3. call `create_draft` with a new `clientRequestId` and `supersedesDraftId`
 4. preview the new draft
 5. commit only the latest draft
 
 Example correction payload:
 ```json
 {
-  "name": "create_staged_card",
+  "name": "create_draft",
   "arguments": {
     "profileId": "y@m@ちゃん",
     "clientRequestId": "ts-concept-any-vs-unknown-002",
@@ -67,7 +66,7 @@ Example user request:
 Example batch payload:
 ```json
 {
-  "name": "create_staged_cards_batch",
+  "name": "create_drafts_batch",
   "arguments": {
     "profileId": "y@m@ちゃん",
     "items": [
@@ -101,7 +100,7 @@ Example batch payload:
 Batch finalize example:
 ```json
 {
-  "name": "discard_staged_cards_batch",
+  "name": "discard_drafts_batch",
   "arguments": {
     "profileId": "y@m@ちゃん",
     "items": [
@@ -115,10 +114,10 @@ Batch finalize example:
 ## 4. Recover after interruption
 
 Sequence:
-1. `list_staged_cards`
-2. `get_staged_card`
-3. `open_staged_card_preview` if visual confirmation is still needed
-4. `commit_staged_card`, `discard_staged_card`, or `cleanup_staged_cards`
+1. `list_drafts`
+2. `get_draft`
+3. `open_draft_preview` if visual confirmation is still needed
+4. `commit_draft`, `discard_draft`, or `cleanup_drafts`
 
 Rule:
 - Prefer explicit discard for known drafts.

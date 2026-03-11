@@ -16,14 +16,14 @@
 - [x] 3.1 Add SQLite schema for `card_type_definitions` with profile-scoped unique key
 - [x] 3.2 Implement registry service and `upsert_card_type_definition`
 - [x] 3.3 Merge builtin+custom catalog in `list/get/validate` paths
-- [x] 3.4 Extend `create_staged_card` to resolve custom `cardTypeId`
+- [x] 3.4 Extend `create_draft` to resolve custom `cardTypeId`
 
 ## 4. Validation and Regression Safety
 
 - [x] 4.1 Add unit tests for authoring validation and dryRun/apply behavior
 - [x] 4.2 Add regression tests for catalog merge precedence and ID-collision rejection
 - [x] 4.3 Add integration tests for AnkiConnect note-type creation/update failure paths
-- [x] 4.4 Re-run staged lifecycle regression suite to ensure no behavior drift
+- [x] 4.4 Re-run draft lifecycle regression suite to ensure no behavior drift
 
 ## 5. Documentation and Operational Readiness
 

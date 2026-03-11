@@ -3,7 +3,7 @@
 - [x] 1.1 Define `cardTypeId` naming and versioning rules
 - [x] 1.2 Finalize `list_card_types` response schema and examples
 - [x] 1.3 Finalize `get_card_type_schema` field metadata schema
-- [x] 1.4 Finalize `validate_card_fields` error/warning schema
+- [x] 1.4 Finalize `` error/warning schema
 - [x] 1.5 Define strict request schema behavior (`additionalProperties=false`) for catalog tools
 - [x] 1.6 Define minimum card-type metadata (`renderIntent`, `allowedHtmlPolicy`) and enum constraints
 - [x] 1.7 Freeze per-tool request/response schema set for all v1 tools
@@ -11,22 +11,22 @@
 
 ## 2. Staged Lifecycle Contract
 
-- [x] 2.1 Define draft state model (`staged/committed/discarded`) and transitions
-- [x] 2.2 Define `create_staged_card` input/output and idempotency behavior
-- [x] 2.3 Define `commit_staged_card` behavior for success/conflict/retry
-- [x] 2.4 Define `discard_staged_card` behavior and recovery guarantees
-- [x] 2.5 Define `list_staged_cards` and `cleanup_staged_cards` semantics
+- [x] 2.1 Define draft state model (`draft/committed/discarded`) and transitions
+- [x] 2.2 Define `create_draft` input/output and idempotency behavior
+- [x] 2.3 Define `commit_draft` behavior for success/conflict/retry
+- [x] 2.4 Define `discard_draft` behavior and recovery guarantees
+- [x] 2.5 Define `list_drafts` and `cleanup_drafts` semantics
 - [x] 2.6 Define `supersedesDraftId` behavior for iterative rebuild workflow
 - [x] 2.7 Define default cleanup threshold as 72h and override policy
 - [x] 2.8 Add normative transition matrix and invalid transition error behavior
 - [x] 2.9 Define fingerprint algorithm inputs and canonicalization rules
 - [x] 2.10 Define supersede chain invariants (latest-only commit, lineage retention)
-- [x] 2.11 Define staged-card study isolation rules (tagging/suspension/release on commit)
-- [x] 2.12 Define `create_staged_card` idempotency key contract (`clientRequestId`) and conflict behavior
+- [x] 2.11 Define draft-card study isolation rules (tagging/suspension/release on commit)
+- [x] 2.12 Define `create_draft` idempotency key contract (`clientRequestId`) and conflict behavior
 
 ## 3. GUI Preview Contract
 
-- [x] 3.1 Define `open_staged_card_preview` behavior and required preconditions
+- [x] 3.1 Define `open_draft_preview` behavior and required preconditions
 - [x] 3.2 Define failure contract when GUI is unavailable
 - [x] 3.3 Define preview confirmation checklist (question/answer visibility and state)
 - [x] 3.4 Define commit precondition payload for review completion (identity/question/answer checks)

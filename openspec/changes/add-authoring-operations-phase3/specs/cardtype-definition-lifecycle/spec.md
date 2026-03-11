@@ -22,9 +22,9 @@ The system SHALL support deprecating a custom card type definition without physi
 - **AND** the definition remains available to read operations that opt into deprecated entries
 
 ### Requirement: Deprecated definition safety
-The system SHALL prevent deprecated definitions from being used for new staged card creation.
+The system SHALL prevent deprecated definitions from being used for new draft creation.
 
-#### Scenario: Create staged card from deprecated definition
-- **WHEN** a client calls `create_staged_card` with a deprecated custom `cardTypeId`
+#### Scenario: Create draft from deprecated definition
+- **WHEN** a client calls `create_draft` with a deprecated custom `cardTypeId`
 - **THEN** the system returns `CONFLICT`
 - **AND** the error context identifies the definition as deprecated

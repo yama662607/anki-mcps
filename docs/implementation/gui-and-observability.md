@@ -2,7 +2,7 @@
 
 ## 3.x GUI preview and commit preconditions
 
-- Preview tool: `open_staged_card_preview`
+- Preview tool: `open_draft_preview`
 - Review completion inputs required at commit:
   - `targetIdentityMatched=true`
   - `questionConfirmed=true`
@@ -12,8 +12,8 @@
 
 ## 4.1 read/write boundary
 
-- Read-ish tools: `list_card_types`, `list_card_type_definitions`, `get_card_type_schema`, `validate_card_fields`, `get_staged_card`, `open_staged_card_preview`, `list_staged_cards`
-- Write tools: `create_staged_card`, `create_staged_cards_batch`, `commit_staged_card`, `commit_staged_cards_batch`, `discard_staged_card`, `discard_staged_cards_batch`, `cleanup_staged_cards`, `deprecate_card_type_definition`
+- Read-ish tools: `list_card_types`, `list_card_type_definitions`, `get_card_type_schema`, `get_draft`, `open_draft_preview`, `list_drafts`
+- Write tools: `create_draft`, `create_drafts_batch`, `commit_draft`, `commit_drafts_batch`, `discard_draft`, `discard_drafts_batch`, `cleanup_drafts`, `deprecate_card_type_definition`
 
 ## 4.2 / 4.8 structured errors and canonical registry
 
@@ -54,11 +54,11 @@ Primary runtime metrics (derived from logs/store):
 
 ## 4.6 conflict detection
 
-- Fingerprint compares stored staged snapshot vs live Anki note snapshot at commit.
+- Fingerprint compares stored draft snapshot vs live Anki note snapshot at commit.
 
 ## 4.7 no-force-commit
 
-- No force path exists in API; manual conflict bypass is rejected via staged lifecycle rules.
+- No force path exists in API; manual conflict bypass is rejected via draft lifecycle rules.
 
 ## 4.9 contract versioning policy
 

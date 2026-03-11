@@ -8,7 +8,7 @@
 4. Review returned `operations`.
 5. Call `upsert_note_type` with `dryRun=false` only when the plan is acceptable.
 6. Register the model as a reusable custom card type with `upsert_card_type_definition`.
-7. Use the normal staged-card flow for note creation.
+7. Use the normal draft flow for note creation and review.
 
 ## Safe update policy
 

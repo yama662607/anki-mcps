@@ -20,20 +20,20 @@
 ## 7.3 tool-to-classification mapping
 
 - Catalog tools: read note-type metadata
-- create staged: writes note/card/tag in a profile + target deck
-- commit/discard/cleanup: mutate staged note/card/tag lifecycle only
+- create draft: writes note/card/tag in a profile + target deck
+- commit/discard/cleanup: mutate draft note/card/tag lifecycle only
 - preview: GUI navigation for target note/card
 
 ## 7.4 standard playbooks
 
-- Add flow: list -> schema -> validate -> create staged -> preview -> commit/discard
-- Correction flow: create staged with `supersedesDraftId` -> preview -> commit latest
-- Recovery flow: list staged -> cleanup stale -> recreate if needed
+- Add flow: list -> schema -> create draft -> preview -> commit/discard
+- Correction flow: create draft with `supersedesDraftId` -> preview -> commit latest
+- Recovery flow: list drafts -> cleanup stale -> recreate if needed
 
 ## 7.5 anti-pattern guardrails
 
 - Do not use deck as design mechanism (design belongs to note type).
-- Do not bypass staging for review-sensitive content.
+- Do not bypass the draft review flow for review-sensitive content.
 
 ## 7.6 profile resolution policy
 

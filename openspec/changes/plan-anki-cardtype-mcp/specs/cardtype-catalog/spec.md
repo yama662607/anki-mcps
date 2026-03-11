@@ -56,11 +56,11 @@ The MCP server MUST define deterministic sanitization behavior for each `allowed
 The MCP server MUST provide a validation tool that checks user input against the selected card type schema before any note is created.
 
 #### Scenario: Validation passes for correct data
-- **WHEN** the client calls `validate_card_fields` with schema-compliant values
+- **WHEN** the client calls `` with schema-compliant values
 - **THEN** the server returns `valid=true` with an empty error list
 
 #### Scenario: Validation fails for missing required field
-- **WHEN** the client omits a required field in `validate_card_fields`
+- **WHEN** the client omits a required field in ``
 - **THEN** the server returns `valid=false` and includes a field-specific error code and message
 
 #### Scenario: Validation reports non-fatal warnings

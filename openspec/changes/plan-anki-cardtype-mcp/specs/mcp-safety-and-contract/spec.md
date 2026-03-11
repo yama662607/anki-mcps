@@ -9,17 +9,17 @@ The MCP server MUST segment tools by risk so read-only and write operations are 
 
 #### Scenario: Write operations require explicit tool call
 - **WHEN** card data is validated and previewed
-- **THEN** no persistent write beyond staged draft creation occurs until `commit_staged_card` is invoked
+- **THEN** no persistent write beyond draft creation occurs until `commit_draft` is invoked
 
 #### Scenario: Write operations require explicit profile
-- **WHEN** a mutating tool (`create_staged_card`, `commit_staged_card`, `discard_staged_card`, `cleanup_staged_cards`) is called without `profileId`
+- **WHEN** a mutating tool (`create_draft`, `commit_draft`, `discard_draft`, `cleanup_drafts`) is called without `profileId`
 - **THEN** the server returns `PROFILE_REQUIRED` and performs no mutation
 
 ### Requirement: Structured Error Contract
 The MCP server MUST return machine-readable error payloads with stable error codes, human-readable messages, and remediation hints.
 
 #### Scenario: Validation error format
-- **WHEN** `validate_card_fields` fails
+- **WHEN** `` fails
 - **THEN** the response includes `code`, `message`, `field`, and `hint` attributes
 
 #### Scenario: Dependency error format
@@ -69,7 +69,7 @@ The MCP server MUST publish frozen v1 JSON Schemas for each tool and a shared-ty
 
 #### Scenario: Tool schemas are discoverable
 - **WHEN** a client reads the contract resource URI
-- **THEN** it receives request/response JSON Schemas for `list_card_types`, `get_card_type_schema`, `validate_card_fields`, `create_staged_card`, `open_staged_card_preview`, `commit_staged_card`, `discard_staged_card`, `list_staged_cards`, and `cleanup_staged_cards`
+- **THEN** it receives request/response JSON Schemas for `list_card_types`, `get_card_type_schema`, `create_draft`, `open_draft_preview`, `commit_draft`, `discard_draft`, `list_drafts`, and `cleanup_drafts`
 
 #### Scenario: Contract URI is stable
 - **WHEN** a client discovers resources for tool contracts
@@ -84,18 +84,18 @@ The MCP server MUST publish frozen v1 JSON Schemas for each tool and a shared-ty
 - **THEN** the server increments major contract version and keeps prior major version available during migration window
 
 ### Requirement: Observability and Auditability
-The MCP server MUST emit structured logs for all state transitions in the staged lifecycle.
+The MCP server MUST emit structured logs for all state transitions in the draft lifecycle.
 
 #### Scenario: Draft lifecycle logging
 - **WHEN** a draft is created, committed, discarded, or cleaned up
 - **THEN** the server logs event type, identifiers, timestamp, and outcome without exposing sensitive card content by default
 
 #### Scenario: Traceability of commit decisions
-- **WHEN** a staged card is committed
+- **WHEN** a draft is committed
 - **THEN** logs include the originating `draftId` and resulting `noteId` for audit correlation
 
 #### Scenario: Profile-aware audit trail
-- **WHEN** any staged lifecycle event is logged
+- **WHEN** any draft lifecycle event is logged
 - **THEN** the log includes `profileId` so events can be traced without cross-profile ambiguity
 
 ### Requirement: Testability as Contract
@@ -107,7 +107,7 @@ The MCP server MUST define contract-level tests covering successful flows and cr
 
 #### Scenario: GUI preview failure resilience
 - **WHEN** GUI integration tests simulate unavailable GUI context
-- **THEN** preview tools return recoverable errors and staged drafts remain recoverable
+- **THEN** preview tools return recoverable errors and drafts remain recoverable
 
 ### Requirement: Quantitative Quality Gate Against Cloned Implementations
 The MCP server MUST define quantitative pass/fail gates that demonstrate better operational quality than cloned reference projects.
@@ -117,8 +117,8 @@ The MCP server MUST define quantitative pass/fail gates that demonstrate better 
 - **THEN** accidental auto-commit count is `0` and duplicate note creation from repeated commit is `0`
 
 #### Scenario: Recovery gate is measurable
-- **WHEN** restart recovery tests run for staged drafts
-- **THEN** staged draft recovery success rate is `100%` and orphan-draft leakage is `0` in the test matrix
+- **WHEN** restart recovery tests run for drafts
+- **THEN** draft recovery success rate is `100%` and orphan-draft leakage is `0` in the test matrix
 
 #### Scenario: Benchmark scoring is explicit
 - **WHEN** comparing this project against cloned implementations

@@ -5,7 +5,7 @@
 現状の課題:
 - ノートタイプ作成/更新がMCP非対応
 - カードタイプ定義が実装内固定（`src/contracts/catalog.ts`）
-- 新規ノートタイプを追加しても `create_staged_card` から参照できない
+- 新規ノートタイプを追加しても `create_draft` から参照できない
 
 ## Architecture
 
@@ -41,8 +41,8 @@ AnkiConnect action mapping:
 
 ### 3) Existing Lifecycle Integration
 
-既存 `create_staged_card` はカードタイプ解決だけ差し替える。
-`open_staged_card_preview` / `commit_staged_card` / `discard_staged_card` 契約は変更しない。
+既存 `create_draft` はカードタイプ解決だけ差し替える。
+`open_draft_preview` / `commit_draft` / `discard_draft` 契約は変更しない。
 
 ## Trade-offs
 
@@ -58,11 +58,11 @@ AnkiConnect action mapping:
 1. read-only note type tools
 2. `upsert_note_type` dry-run/apply
 3. custom card type registry
-4. staged flow integration + regressions
+4. draft flow integration + regressions
 
 ## Open Questions (resolved in this design)
 
 - Q: 破壊的更新（field remove/rename）を許可するか？
   - A: Phase2では不許可。別changeで明示的migration toolとして扱う。
 - Q: 問題自動生成を同時に入れるか？
-  - A: 入れない。カード生成自体は既存staged flowで対応し、生成は次フェーズ分離。
+  - A: 入れない。カード生成自体は既存draft flowで対応し、生成は次フェーズ分離。

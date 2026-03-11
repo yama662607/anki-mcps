@@ -14,11 +14,11 @@ Coverage includes:
 - schema/sanitizer behavior
 - note-type discovery, dry-run, additive-safe update, and dependency failure wrapping
 - AnkiConnect connection failure and HTTP failure wrapping
-- staged creation and idempotent retry
-- staged creation from custom card type definitions
-- staged draft inspection
+- draft creation and idempotent retry
+- draft creation from custom card type definitions
+- draft inspection
 - custom card type definition deprecation and active-only listing
-- batch staged create / commit / discard with mixed outcomes
+- batch draft create / commit / discard with mixed outcomes
 - MCP tool registration, annotations, resources, and end-to-end in-memory tool execution
 - commit idempotency
 - conflict detection after manual edit
@@ -36,9 +36,9 @@ Planned cases (gateway boundary):
 ## 5.3 GUI E2E plan
 
 Planned end-to-end checks:
-- create staged draft -> open preview -> confirm -> commit
-- create staged draft -> preview -> user correction -> supersede -> commit latest
-- batch staged create -> finalize via batch discard or batch commit
+- create draft -> open preview -> confirm -> commit
+- create draft -> preview -> user correction -> supersede -> commit latest
+- batch draft create -> finalize via batch discard or batch commit
 - GUI unavailable path returns recoverable structured error
 - semi-automated real Anki script: `docs/implementation/e2e-real-anki.md`
 
@@ -46,7 +46,7 @@ Planned end-to-end checks:
 
 Regression checks in `tests/draftService.test.ts`:
 - second commit returns `already_committed`
-- cleanup discard path removes stale staged drafts
+- cleanup discard path removes stale drafts
 
 ## 5.5 manual edit conflict + superseded rejection
 
@@ -74,14 +74,14 @@ Axes: `safety`, `recovery`, `testability`, `observability`
 
 - accidental auto-commit: 0
 - duplicate creation on commit retry: 0
-- staged recovery success in test matrix: 100%
+- draft recovery success in test matrix: 100%
 
 ## 6.5 benchmark evidence format
 
 | Axis | Score | Evidence |
 |---|---:|---|
 | safety | 4 | state-machine + no-force-commit + profile gating |
-| recovery | 4 | staged persistence + cleanup + idempotency |
+| recovery | 4 | draft persistence + cleanup + idempotency |
 | testability | 4 | focused unit suites + deterministic memory gateway |
 | observability | 4 | structured lifecycle logs + profile-scoped events |
 

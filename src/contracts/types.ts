@@ -40,7 +40,7 @@ export type ValidationIssue = {
   hint?: string;
 };
 
-export type DraftState = 'staged' | 'superseded' | 'committed' | 'discarded';
+export type DraftState = 'draft' | 'superseded' | 'committed' | 'discarded';
 
 export type DraftRecord = {
   draftId: string;
@@ -57,7 +57,7 @@ export type DraftRecord = {
   deckName: string;
   modTimestamp: number;
   clientRequestId: string;
-  stagedMarkerTag: string;
+  draftMarkerTag: string;
   createdAt: string;
   updatedAt: string;
   committedAt?: string;

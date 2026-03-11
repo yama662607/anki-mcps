@@ -21,5 +21,5 @@ The system SHALL extend the real-Anki smoke plan only to the minimum paths intro
 
 #### Scenario: Batch authoring smoke flow
 - **WHEN** real-Anki smoke tests are run
-- **THEN** at least one batch staged create path and one batch finalize path are exercised
+- **THEN** at least one batch draft create path and one batch finalize path are exercised
 - **AND** the smoke flow leaves Anki in a clean state after completion

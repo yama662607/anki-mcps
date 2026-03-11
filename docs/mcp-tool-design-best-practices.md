@@ -58,14 +58,14 @@ Implication:
 ### A. Granularity Policy
 
 - High-level (まとめる):
-  - `list_card_types`, `get_card_type_schema`, `validate_card_fields`, `open_staged_card_preview`
+  - `list_card_types`, `get_card_type_schema`, `create_draft`, `open_draft_preview`
 - Fine-grained (分ける):
-  - `commit_staged_card`, `discard_staged_card`, `cleanup_staged_cards`
+  - `commit_draft`, `discard_draft`, `cleanup_drafts`
 
 ### B. Safety Policy
 
 - 書き込み確定は `commit` のみ
-- プレビュー段階では staged 作成以外の本番変更を禁止
+- プレビュー段階では draft 作成以外の本番変更を禁止
 - すべての状態遷移を構造化ログで記録
 
 ### C. Performance Policy

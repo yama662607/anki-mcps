@@ -28,7 +28,7 @@ function createService() {
 }
 
 describe('DraftService', () => {
-  it('creates staged draft and reuses same draft for idempotent retries', async () => {
+  it('creates draft and reuses same draft for idempotent retries', async () => {
     const { service, store } = createService();
 
     const first = await service.createStagedCard({
@@ -46,7 +46,7 @@ describe('DraftService', () => {
     });
 
     expect(second.draft.draftId).toBe(first.draft.draftId);
-    expect(store.getDraft('default', first.draft.draftId)?.state).toBe('staged');
+    expect(store.getDraft('default', first.draft.draftId)?.state).toBe('draft');
 
     store.close();
   });
@@ -73,9 +73,9 @@ describe('DraftService', () => {
     store.close();
   });
 
-  it('commits a staged draft and is idempotent on second commit', async () => {
+  it('commits a draft and is idempotent on second commit', async () => {
     const { service, store } = createService();
-    const staged = await service.createStagedCard({
+    const draft = await service.createStagedCard({
       profileId: 'default',
       clientRequestId: 'req-3',
       cardTypeId: 'programming.v1.concept-qa',
@@ -84,7 +84,7 @@ describe('DraftService', () => {
 
     const firstCommit = await service.commitStagedCard({
       profileId: 'default',
-      draftId: staged.draft.draftId,
+      draftId: draft.draft.draftId,
       reviewDecision: {
         targetIdentityMatched: true,
         questionConfirmed: true,
@@ -96,7 +96,7 @@ describe('DraftService', () => {
 
     const secondCommit = await service.commitStagedCard({
       profileId: 'default',
-      draftId: staged.draft.draftId,
+      draftId: draft.draft.draftId,
       reviewDecision: {
         targetIdentityMatched: true,
         questionConfirmed: true,
@@ -113,21 +113,21 @@ describe('DraftService', () => {
 
   it('detects conflict when note changes before commit', async () => {
     const { service, store, gateway } = createService();
-    const staged = await service.createStagedCard({
+    const draft = await service.createStagedCard({
       profileId: 'default',
       clientRequestId: 'req-4',
       cardTypeId: 'language.v1.basic-bilingual',
       fields: { Front: 'x', Back: 'y' },
     });
 
-    gateway.mutateNote(staged.draft.noteId, (note) => {
+    gateway.mutateNote(draft.draft.noteId, (note) => {
       note.fields.Back = 'changed';
     });
 
     await expect(
       service.commitStagedCard({
         profileId: 'default',
-        draftId: staged.draft.draftId,
+        draftId: draft.draft.draftId,
         reviewDecision: {
           targetIdentityMatched: true,
           questionConfirmed: true,
@@ -143,7 +143,7 @@ describe('DraftService', () => {
 
   it('rejects missing checklist confirmation', async () => {
     const { service, store } = createService();
-    const staged = await service.createStagedCard({
+    const draft = await service.createStagedCard({
       profileId: 'default',
       clientRequestId: 'req-5',
       cardTypeId: 'language.v1.basic-bilingual',
@@ -154,7 +154,7 @@ describe('DraftService', () => {
     try {
       await service.commitStagedCard({
         profileId: 'default',
-        draftId: staged.draft.draftId,
+        draftId: draft.draft.draftId,
         reviewDecision: {
           targetIdentityMatched: false,
           questionConfirmed: true,
@@ -175,7 +175,7 @@ describe('DraftService', () => {
 
   it('returns PROFILE_SCOPE_MISMATCH when mutating other profile draft', async () => {
     const { service, store } = createService();
-    const staged = await service.createStagedCard({
+    const draft = await service.createStagedCard({
       profileId: 'profile-a',
       clientRequestId: 'req-6',
       cardTypeId: 'language.v1.basic-bilingual',
@@ -185,7 +185,7 @@ describe('DraftService', () => {
     await expect(
       service.commitStagedCard({
         profileId: 'profile-b',
-        draftId: staged.draft.draftId,
+        draftId: draft.draft.draftId,
         reviewDecision: {
           targetIdentityMatched: true,
           questionConfirmed: true,
@@ -246,9 +246,9 @@ describe('DraftService', () => {
     store.close();
   });
 
-  it('cleans up stale staged drafts with default 72h threshold', async () => {
+  it('cleans up stale drafts with default 72h threshold', async () => {
     const { service, store } = createService();
-    const staged = await service.createStagedCard({
+    const draft = await service.createStagedCard({
       profileId: 'default',
       clientRequestId: 'req-8',
       cardTypeId: 'language.v1.basic-bilingual',
@@ -257,21 +257,21 @@ describe('DraftService', () => {
 
     store.updateDraftState({
       profileId: 'default',
-      draftId: staged.draft.draftId,
-      state: 'staged',
+      draftId: draft.draft.draftId,
+      state: 'draft',
       updatedAt: new Date(Date.now() - 73 * 60 * 60 * 1000).toISOString(),
     });
 
     const cleaned = await service.cleanupStagedCards({ profileId: 'default' });
     expect(cleaned.olderThanHours).toBe(72);
-    expect(cleaned.deletedDraftIds).toContain(staged.draft.draftId);
+    expect(cleaned.deletedDraftIds).toContain(draft.draft.draftId);
 
     store.close();
   });
 
   it('returns already_discarded on second discard and rejects discarding committed drafts', async () => {
     const { service, store } = createService();
-    const staged = await service.createStagedCard({
+    const draft = await service.createStagedCard({
       profileId: 'default',
       clientRequestId: 'req-9',
       cardTypeId: 'language.v1.basic-bilingual',
@@ -280,11 +280,11 @@ describe('DraftService', () => {
 
     const firstDiscard = await service.discardStagedCard({
       profileId: 'default',
-      draftId: staged.draft.draftId,
+      draftId: draft.draft.draftId,
     });
     const secondDiscard = await service.discardStagedCard({
       profileId: 'default',
-      draftId: staged.draft.draftId,
+      draftId: draft.draft.draftId,
     });
 
     expect(firstDiscard.result.status).toBe('discarded');
@@ -363,7 +363,7 @@ describe('DraftService', () => {
     store.close();
   });
 
-  it('creates staged draft from a custom card type definition', async () => {
+  it('creates draft from a custom card type definition', async () => {
     const store = new DraftStore(dbPath);
     const gateway = new MemoryGateway();
 
@@ -390,7 +390,7 @@ describe('DraftService', () => {
       stagedMarkerTag: '__mcp_staged',
     });
 
-    const staged = await customService.createStagedCard({
+    const draft = await customService.createStagedCard({
       profileId: 'default',
       clientRequestId: 'req-custom-1',
       cardTypeId: 'programming.v1.ts-concept',
@@ -401,16 +401,16 @@ describe('DraftService', () => {
       },
     });
 
-    expect(staged.draft.cardTypeId).toBe('programming.v1.ts-concept');
-    expect(staged.draft.deckName).toBe('Programming::TypeScript::Concept');
-    expect(staged.draft.fields.Prompt).toBe('any と unknown の違いは？');
+    expect(draft.draft.cardTypeId).toBe('programming.v1.ts-concept');
+    expect(draft.draft.deckName).toBe('Programming::TypeScript::Concept');
+    expect(draft.draft.fields.Prompt).toBe('any と unknown の違いは？');
 
     store.close();
   });
 
-  it('returns stored staged draft details and blocks cross-profile inspection', async () => {
+  it('returns stored draft details and blocks cross-profile inspection', async () => {
     const { service, store } = createService();
-    const staged = await service.createStagedCard({
+    const draft = await service.createStagedCard({
       profileId: 'default',
       clientRequestId: 'req-12',
       cardTypeId: 'language.v1.basic-bilingual',
@@ -420,24 +420,24 @@ describe('DraftService', () => {
 
     const detail = await service.getStagedCard({
       profileId: 'default',
-      draftId: staged.draft.draftId,
+      draftId: draft.draft.draftId,
     });
 
-    expect(detail.draft.draftId).toBe(staged.draft.draftId);
+    expect(detail.draft.draftId).toBe(draft.draft.draftId);
     expect(detail.draft.fields.Front).toBe('hello');
     expect(detail.cardType.cardTypeId).toBe('language.v1.basic-bilingual');
 
     await expect(
       service.getStagedCard({
         profileId: 'other-profile',
-        draftId: staged.draft.draftId,
+        draftId: draft.draft.draftId,
       }),
     ).rejects.toMatchObject({ code: 'PROFILE_SCOPE_MISMATCH' });
 
     store.close();
   });
 
-  it('creates staged cards in batch with mixed outcomes', async () => {
+  it('creates drafts in batch with mixed outcomes', async () => {
     const { service, store } = createService();
 
     const batch = await service.createStagedCardsBatch({
@@ -544,7 +544,7 @@ describe('DraftService', () => {
     store.close();
   });
 
-  it('rejects deprecated custom card type definitions during staged creation', async () => {
+  it('rejects deprecated custom card type definitions during draft creation', async () => {
     const store = new DraftStore(dbPath);
     const gateway = new MemoryGateway();
     const catalog = new CatalogService(store);

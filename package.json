@@ -1,7 +1,7 @@
 {
   "name": "anki-mcps",
   "version": "0.1.0",
-  "description": "Anki MCP server with staged card lifecycle and strict contracts",
+  "description": "Anki MCP server with draft lifecycle and strict contracts",
   "type": "module",
   "private": true,
   "main": "dist/src/index.js",

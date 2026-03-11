@@ -1,12 +1,12 @@
 ## ADDED Requirements
 
-### Requirement: Batch staged creation
-The system SHALL provide a batch staged creation operation that accepts multiple create requests under one `profileId` and returns an itemized result for every request.
+### Requirement: Batch draft creation
+The system SHALL provide a batch draft creation operation that accepts multiple create requests under one `profileId` and returns an itemized result for every request.
 
 #### Scenario: Batch create with mixed outcomes
 - **WHEN** a batch contains both valid and invalid create requests
 - **THEN** the system returns a `results[]` entry for every item
-- **AND** valid items are created as normal staged drafts
+- **AND** valid items are created as normal drafts
 - **AND** invalid items return structured errors without cancelling successful items
 
 ### Requirement: Batch finalize operations

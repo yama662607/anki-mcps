@@ -1,24 +1,23 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
-  cleanupStagedCardsInputSchema,
-  commitStagedCardsBatchInputSchema,
-  commitStagedCardInputSchema,
-  createStagedCardsBatchInputSchema,
-  createStagedCardInputSchema,
+  cleanupDraftsInputSchema,
+  commitDraftsBatchInputSchema,
+  commitDraftInputSchema,
+  createDraftsBatchInputSchema,
+  createDraftInputSchema,
   deprecateCardTypeDefinitionInputSchema,
   getCardTypeSchemaInputSchema,
   getNoteTypeSchemaInputSchema,
-  getStagedCardInputSchema,
+  getDraftInputSchema,
   listCardTypeDefinitionsInputSchema,
   listCardTypesInputSchema,
   listNoteTypesInputSchema,
-  listStagedCardsInputSchema,
-  openStagedCardPreviewInputSchema,
+  listDraftsInputSchema,
+  openDraftPreviewInputSchema,
   upsertCardTypeDefinitionInputSchema,
   upsertNoteTypeInputSchema,
-  validateCardFieldsInputSchema,
-  discardStagedCardsBatchInputSchema,
-  discardStagedCardInputSchema,
+  discardDraftsBatchInputSchema,
+  discardDraftInputSchema,
 } from '../contracts/schemas.js';
 import { CatalogService } from '../services/catalogService.js';
 import { DraftService } from '../services/draftService.js';
@@ -183,34 +182,6 @@ export function registerMcpHandlers(server: McpServer, services: {
   );
 
   server.registerTool(
-    'validate_card_fields',
-    {
-      title: 'Validate Card Fields',
-      description: 'Validate and sanitize card field inputs before creation.',
-      inputSchema: validateCardFieldsInputSchema,
-      annotations: { readOnlyHint: true },
-    },
-    async (input) => {
-      try {
-        const args = parseOrThrow(validateCardFieldsInputSchema, input);
-        const profileId = resolveProfileId({
-          providedProfileId: args.profileId,
-          activeProfileId: process.env.ANKI_ACTIVE_PROFILE,
-          requireExplicitForWrite: false,
-        });
-        const payload = {
-          contractVersion: '1.0.0',
-          profileId,
-          ...services.catalogService.validateFields({ ...args, profileId }),
-        };
-        return successResult(payload);
-      } catch (error) {
-        return errorResult(error);
-      }
-    },
-  );
-
-  server.registerTool(
     'list_note_types',
     {
       title: 'List Note Types',
@@ -293,16 +264,16 @@ export function registerMcpHandlers(server: McpServer, services: {
   );
 
   server.registerTool(
-    'create_staged_card',
+    'create_draft',
     {
-      title: 'Create Staged Card',
-      description: 'Create a staged draft only (not committed). Requires profileId and clientRequestId.',
-      inputSchema: createStagedCardInputSchema,
+      title: 'Create Draft',
+      description: 'Create a draft only (not committed). Requires profileId and clientRequestId.',
+      inputSchema: createDraftInputSchema,
       annotations: { readOnlyHint: false, destructiveHint: false },
     },
     async (input) => {
       try {
-        const args = parseOrThrow(createStagedCardInputSchema, input);
+        const args = parseOrThrow(createDraftInputSchema, input);
         const payload = await services.draftService.createStagedCard(args);
         return successResult(payload);
       } catch (error) {
@@ -312,16 +283,16 @@ export function registerMcpHandlers(server: McpServer, services: {
   );
 
   server.registerTool(
-    'create_staged_cards_batch',
+    'create_drafts_batch',
     {
-      title: 'Create Staged Cards Batch',
-      description: 'Create multiple staged drafts with per-item success and error reporting.',
-      inputSchema: createStagedCardsBatchInputSchema,
+      title: 'Create Drafts Batch',
+      description: 'Create multiple drafts with per-item success and error reporting.',
+      inputSchema: createDraftsBatchInputSchema,
       annotations: { readOnlyHint: false, destructiveHint: false },
     },
     async (input) => {
       try {
-        const args = parseOrThrow(createStagedCardsBatchInputSchema, input);
+        const args = parseOrThrow(createDraftsBatchInputSchema, input);
         return successResult(await services.draftService.createStagedCardsBatch(args));
       } catch (error) {
         return errorResult(error);
@@ -330,16 +301,16 @@ export function registerMcpHandlers(server: McpServer, services: {
   );
 
   server.registerTool(
-    'get_staged_card',
+    'get_draft',
     {
-      title: 'Get Staged Card',
+      title: 'Get Draft',
       description: 'Read stored metadata and field contents for one draft.',
-      inputSchema: getStagedCardInputSchema,
+      inputSchema: getDraftInputSchema,
       annotations: { readOnlyHint: true },
     },
     async (input) => {
       try {
-        const args = parseOrThrow(getStagedCardInputSchema, input);
+        const args = parseOrThrow(getDraftInputSchema, input);
         return successResult(await services.draftService.getStagedCard(args));
       } catch (error) {
         return errorResult(error);
@@ -348,16 +319,16 @@ export function registerMcpHandlers(server: McpServer, services: {
   );
 
   server.registerTool(
-    'open_staged_card_preview',
+    'open_draft_preview',
     {
-      title: 'Open Staged Card Preview',
-      description: 'Open Anki Browser for visual review of a staged draft before commit/discard.',
-      inputSchema: openStagedCardPreviewInputSchema,
+      title: 'Open Draft Preview',
+      description: 'Open Anki Browser for visual review of a draft before commit/discard.',
+      inputSchema: openDraftPreviewInputSchema,
       annotations: { readOnlyHint: true },
     },
     async (input) => {
       try {
-        const args = parseOrThrow(openStagedCardPreviewInputSchema, input);
+        const args = parseOrThrow(openDraftPreviewInputSchema, input);
         const payload = await services.draftService.openStagedCardPreview(args);
         return successResult(payload);
       } catch (error) {
@@ -367,16 +338,16 @@ export function registerMcpHandlers(server: McpServer, services: {
   );
 
   server.registerTool(
-    'commit_staged_card',
+    'commit_draft',
     {
-      title: 'Commit Staged Card',
-      description: 'Finalize a staged draft after explicit user approval and full reviewDecision=true checks.',
-      inputSchema: commitStagedCardInputSchema,
+      title: 'Commit Draft',
+      description: 'Finalize a draft after explicit user approval and full reviewDecision=true checks.',
+      inputSchema: commitDraftInputSchema,
       annotations: { readOnlyHint: false, destructiveHint: false },
     },
     async (input) => {
       try {
-        const args = parseOrThrow(commitStagedCardInputSchema, input);
+        const args = parseOrThrow(commitDraftInputSchema, input);
         const payload = await services.draftService.commitStagedCard(args);
         return successResult(payload);
       } catch (error) {
@@ -386,16 +357,16 @@ export function registerMcpHandlers(server: McpServer, services: {
   );
 
   server.registerTool(
-    'commit_staged_cards_batch',
+    'commit_drafts_batch',
     {
-      title: 'Commit Staged Cards Batch',
+      title: 'Commit Drafts Batch',
       description: 'Commit multiple drafts with per-item review decisions and outcomes.',
-      inputSchema: commitStagedCardsBatchInputSchema,
+      inputSchema: commitDraftsBatchInputSchema,
       annotations: { readOnlyHint: false, destructiveHint: false },
     },
     async (input) => {
       try {
-        const args = parseOrThrow(commitStagedCardsBatchInputSchema, input);
+        const args = parseOrThrow(commitDraftsBatchInputSchema, input);
         return successResult(await services.draftService.commitStagedCardsBatch(args));
       } catch (error) {
         return errorResult(error);
@@ -404,16 +375,16 @@ export function registerMcpHandlers(server: McpServer, services: {
   );
 
   server.registerTool(
-    'discard_staged_card',
+    'discard_draft',
     {
-      title: 'Discard Staged Card',
-      description: 'Discard staged/superseded draft and remove Anki note.',
-      inputSchema: discardStagedCardInputSchema,
+      title: 'Discard Draft',
+      description: 'Discard draft/superseded draft and remove the Anki note.',
+      inputSchema: discardDraftInputSchema,
       annotations: { readOnlyHint: false, destructiveHint: true },
     },
     async (input) => {
       try {
-        const args = parseOrThrow(discardStagedCardInputSchema, input);
+        const args = parseOrThrow(discardDraftInputSchema, input);
         const payload = await services.draftService.discardStagedCard(args);
         return successResult(payload);
       } catch (error) {
@@ -423,16 +394,16 @@ export function registerMcpHandlers(server: McpServer, services: {
   );
 
   server.registerTool(
-    'discard_staged_cards_batch',
+    'discard_drafts_batch',
     {
-      title: 'Discard Staged Cards Batch',
+      title: 'Discard Drafts Batch',
       description: 'Discard multiple drafts with per-item success and idempotent already_discarded results.',
-      inputSchema: discardStagedCardsBatchInputSchema,
+      inputSchema: discardDraftsBatchInputSchema,
       annotations: { readOnlyHint: false, destructiveHint: true },
     },
     async (input) => {
       try {
-        const args = parseOrThrow(discardStagedCardsBatchInputSchema, input);
+        const args = parseOrThrow(discardDraftsBatchInputSchema, input);
         return successResult(await services.draftService.discardStagedCardsBatch(args));
       } catch (error) {
         return errorResult(error);
@@ -441,16 +412,16 @@ export function registerMcpHandlers(server: McpServer, services: {
   );
 
   server.registerTool(
-    'list_staged_cards',
+    'list_drafts',
     {
-      title: 'List Staged Cards',
-      description: 'List staged lifecycle records with cursor pagination.',
-      inputSchema: listStagedCardsInputSchema,
+      title: 'List Drafts',
+      description: 'List draft lifecycle records with cursor pagination.',
+      inputSchema: listDraftsInputSchema,
       annotations: { readOnlyHint: true },
     },
     async (input) => {
       try {
-        const args = parseOrThrow(listStagedCardsInputSchema, input);
+        const args = parseOrThrow(listDraftsInputSchema, input);
         const payload = services.draftService.listStagedCards(args);
         return successResult(payload);
       } catch (error) {
@@ -460,16 +431,16 @@ export function registerMcpHandlers(server: McpServer, services: {
   );
 
   server.registerTool(
-    'cleanup_staged_cards',
+    'cleanup_drafts',
     {
-      title: 'Cleanup Staged Cards',
-      description: 'Discard stale staged/superseded drafts older than threshold.',
-      inputSchema: cleanupStagedCardsInputSchema,
+      title: 'Cleanup Drafts',
+      description: 'Discard stale draft/superseded drafts older than threshold.',
+      inputSchema: cleanupDraftsInputSchema,
       annotations: { readOnlyHint: false, destructiveHint: true },
     },
     async (input) => {
       try {
-        const args = parseOrThrow(cleanupStagedCardsInputSchema, input);
+        const args = parseOrThrow(cleanupDraftsInputSchema, input);
         const payload = await services.draftService.cleanupStagedCards(args);
         return successResult(payload);
       } catch (error) {

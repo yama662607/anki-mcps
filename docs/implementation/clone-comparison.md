@@ -11,7 +11,7 @@ Compared reference implementations in `clones/` against v1 target criteria:
 | **this project target (v1)** | **4** | **4** | **4** | **4** | **16** |
 
 Rationale for target advantage:
-- strict staged lifecycle state machine
+- strict draft lifecycle state machine
 - explicit commit/discard separation
 - deterministic conflict fingerprinting
 - write-time explicit profile requirement

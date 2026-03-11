@@ -62,9 +62,9 @@ describe('MCP server', () => {
 
       expect(byName.get('list_note_types')?.annotations?.readOnlyHint).toBe(true);
       expect(byName.get('upsert_note_type')?.annotations?.readOnlyHint).toBe(false);
-      expect(byName.get('discard_staged_card')?.annotations?.destructiveHint).toBe(true);
-      expect(byName.get('get_staged_card')?.annotations?.readOnlyHint).toBe(true);
-      expect(byName.get('create_staged_cards_batch')?.annotations?.readOnlyHint).toBe(false);
+      expect(byName.get('discard_draft')?.annotations?.destructiveHint).toBe(true);
+      expect(byName.get('get_draft')?.annotations?.readOnlyHint).toBe(true);
+      expect(byName.get('create_drafts_batch')?.annotations?.readOnlyHint).toBe(false);
     } finally {
       await closeContext(context);
     }
@@ -84,16 +84,16 @@ describe('MCP server', () => {
       expect(payload).toHaveProperty('contractVersion', '1.0.0');
       expect(payload.tools).toHaveProperty('upsert_note_type');
       expect(payload.tools).toHaveProperty('upsert_card_type_definition');
-      expect(payload.tools).toHaveProperty('commit_staged_card');
-      expect(payload.tools).toHaveProperty('get_staged_card');
-      expect(payload.tools).toHaveProperty('create_staged_cards_batch');
+      expect(payload.tools).toHaveProperty('commit_draft');
+      expect(payload.tools).toHaveProperty('get_draft');
+      expect(payload.tools).toHaveProperty('create_drafts_batch');
       expect(payload.tools).toHaveProperty('list_card_type_definitions');
     } finally {
       await closeContext(context);
     }
   });
 
-  it('executes note-type authoring and staged creation through MCP tools', async () => {
+  it('executes note-type authoring and draft creation through MCP tools', async () => {
     const context = await createConnectedContext();
 
     try {
@@ -145,8 +145,8 @@ describe('MCP server', () => {
 
       expect(upsertCardType.cardType.cardTypeId).toBe('programming.v1.ts-concept');
 
-      const staged = parseToolResult(await context.client.callTool({
-        name: 'create_staged_card',
+      const draft = parseToolResult(await context.client.callTool({
+        name: 'create_draft',
         arguments: {
           profileId: 'default',
           clientRequestId: 'mcp-server-test-1',
@@ -159,19 +159,19 @@ describe('MCP server', () => {
         },
       }));
 
-      expect(staged.draft.cardTypeId).toBe('programming.v1.ts-concept');
-      expect(staged.draft.deckName).toBe('Programming::TypeScript::Concept');
+      expect(draft.draft.cardTypeId).toBe('programming.v1.ts-concept');
+      expect(draft.draft.deckName).toBe('Programming::TypeScript::Concept');
 
       const preview = parseToolResult(await context.client.callTool({
-        name: 'open_staged_card_preview',
+        name: 'open_draft_preview',
         arguments: {
           profileId: 'default',
-          draftId: staged.draft.draftId,
+          draftId: draft.draft.draftId,
         },
       }));
 
       expect(preview.preview.opened).toBe(true);
-      expect(preview.preview.selectedNoteId).toBe(staged.draft.noteId);
+      expect(preview.preview.selectedNoteId).toBe(draft.draft.noteId);
     } finally {
       await closeContext(context);
     }
@@ -182,7 +182,7 @@ describe('MCP server', () => {
 
     try {
       const invalid = parseToolResult(await context.client.callTool({
-        name: 'create_staged_card',
+        name: 'create_draft',
         arguments: {
           profileId: 'default',
           clientRequestId: 'mcp-server-test-invalid',
@@ -194,8 +194,8 @@ describe('MCP server', () => {
       expect(invalid.code).toBe('INVALID_ARGUMENT');
       expect(invalid.retryable).toBe(false);
 
-      const staged = parseToolResult(await context.client.callTool({
-        name: 'create_staged_card',
+      const draft = parseToolResult(await context.client.callTool({
+        name: 'create_draft',
         arguments: {
           profileId: 'profile-a',
           clientRequestId: 'mcp-server-test-profile',
@@ -205,10 +205,10 @@ describe('MCP server', () => {
       }));
 
       const mismatch = parseToolResult(await context.client.callTool({
-        name: 'commit_staged_card',
+        name: 'commit_draft',
         arguments: {
           profileId: 'profile-b',
-          draftId: staged.draft.draftId,
+          draftId: draft.draft.draftId,
           reviewDecision: {
             targetIdentityMatched: true,
             questionConfirmed: true,
@@ -254,7 +254,7 @@ describe('MCP server', () => {
       expect(custom.cardType.cardTypeId).toBe('programming.v1.ts-output');
 
       const batchCreate = parseToolResult(await context.client.callTool({
-        name: 'create_staged_cards_batch',
+        name: 'create_drafts_batch',
         arguments: {
           profileId: 'default',
           items: [
@@ -281,7 +281,7 @@ describe('MCP server', () => {
       const stagedDraftId = batchCreate.results[0]?.draft?.draftId as string;
 
       const detail = parseToolResult(await context.client.callTool({
-        name: 'get_staged_card',
+        name: 'get_draft',
         arguments: {
           profileId: 'default',
           draftId: stagedDraftId,
@@ -319,7 +319,7 @@ describe('MCP server', () => {
       expect(listedAll.items).toHaveLength(1);
 
       const rejected = parseToolResult(await context.client.callTool({
-        name: 'create_staged_card',
+        name: 'create_draft',
         arguments: {
           profileId: 'default',
           clientRequestId: 'mcp-deprecated-1',

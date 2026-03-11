@@ -12,10 +12,10 @@ The MCP server specification MUST define distinct responsibilities for Anki clas
 - **THEN** the model states that templates and CSS are managed by `note type` rather than `deck`
 
 ### Requirement: Profile-Scoped Operations
-All staged lifecycle and catalog operations MUST execute within an explicit Anki profile scope.
+All draft lifecycle and catalog operations MUST execute within an explicit Anki profile scope.
 
 #### Scenario: Profile context is attached to operations
-- **WHEN** a client executes staging tools
+- **WHEN** a client executes draft tools
 - **THEN** the operation context includes a resolved profile identifier and rejects ambiguous profile state
 
 #### Scenario: Cross-profile isolation
@@ -41,11 +41,11 @@ The operating model MUST define a deterministic precedence order for resolving t
 The operating model MUST require explicit `profileId` for all mutating tools.
 
 #### Scenario: Write request without profile is rejected
-- **WHEN** `create_staged_card`, `commit_staged_card`, `discard_staged_card`, or `cleanup_staged_cards` is called without `profileId`
+- **WHEN** `create_draft`, `commit_draft`, `discard_draft`, or `cleanup_drafts` is called without `profileId`
 - **THEN** the server returns `PROFILE_REQUIRED` and performs no mutation
 
 #### Scenario: Read-only tools can use active-profile fallback
-- **WHEN** `list_card_types`, `get_card_type_schema`, `validate_card_fields`, `open_staged_card_preview`, or `list_staged_cards` omits `profileId`
+- **WHEN** `list_card_types`, `get_card_type_schema`, `open_draft_preview`, or `list_drafts` omits `profileId`
 - **THEN** the server may resolve a unique active profile and returns the resolved value in response context
 
 #### Scenario: Cross-profile draft mutation is blocked
@@ -64,11 +64,11 @@ The specification MUST provide a normative mapping of each MCP tool to the Anki 
 - **THEN** its mapped mutation scope is limited and explicitly documented in line with `mcp-safety-and-contract`
 
 ### Requirement: Standard Operating Playbooks
-The specification MUST define standard workflows for add, preview, correction, and rebuild operations using the staged lifecycle.
+The specification MUST define standard workflows for add, preview, correction, and rebuild operations using the draft lifecycle.
 
 #### Scenario: Add and confirm workflow
 - **WHEN** a new card is created
-- **THEN** the flow follows `cardtype-catalog -> validate -> staged-card-lifecycle preview -> commit/discard`
+- **THEN** the flow follows `cardtype-catalog -> create draft -> preview -> commit/discard`
 
 #### Scenario: Rebuild workflow after user feedback
 - **WHEN** a user requests revisions after preview
@@ -87,4 +87,4 @@ The operating model MUST document prohibited or discouraged usage patterns that 
 
 #### Scenario: Direct write without staging warning
 - **WHEN** an automation requests immediate persistent write for review-sensitive content
-- **THEN** the guidance marks it as high risk and recommends staged confirmation flow
+- **THEN** the guidance marks it as high risk and recommends draft confirmation flow

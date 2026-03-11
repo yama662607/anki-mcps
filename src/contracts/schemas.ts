@@ -11,7 +11,7 @@ export const modelNameSchema = z.string().min(1).max(180);
 export const fieldNameSchema = z.string().min(1).max(180);
 export const templateNameSchema = z.string().min(1).max(180);
 
-export const draftStateSchema = z.enum(['staged', 'superseded', 'committed', 'discarded']);
+export const draftStateSchema = z.enum(['draft', 'superseded', 'committed', 'discarded']);
 
 export const reviewDecisionSchema = z
   .object({
@@ -108,17 +108,7 @@ export const getCardTypeSchemaInputSchema = z
   })
   .strict();
 
-export const validateCardFieldsInputSchema = z
-  .object({
-    cardTypeId: cardTypeIdSchema,
-    profileId: profileIdSchema.optional(),
-    fields: z.record(z.string(), z.string()),
-    tags: z.array(z.string()).optional(),
-    deckName: z.string().min(1).max(180).optional(),
-  })
-  .strict();
-
-export const createStagedCardInputSchema = z
+export const createDraftInputSchema = z
   .object({
     cardTypeId: cardTypeIdSchema,
     profileId: profileIdSchema,
@@ -130,7 +120,7 @@ export const createStagedCardInputSchema = z
   })
   .strict();
 
-export const createStagedCardsBatchInputSchema = z
+export const createDraftsBatchInputSchema = z
   .object({
     profileId: profileIdSchema,
     items: z.array(
@@ -149,21 +139,21 @@ export const createStagedCardsBatchInputSchema = z
   })
   .strict();
 
-export const getStagedCardInputSchema = z
+export const getDraftInputSchema = z
   .object({
     draftId: draftIdSchema,
     profileId: profileIdSchema.optional(),
   })
   .strict();
 
-export const openStagedCardPreviewInputSchema = z
+export const openDraftPreviewInputSchema = z
   .object({
     draftId: draftIdSchema,
     profileId: profileIdSchema.optional(),
   })
   .strict();
 
-export const commitStagedCardInputSchema = z
+export const commitDraftInputSchema = z
   .object({
     draftId: draftIdSchema,
     profileId: profileIdSchema,
@@ -171,7 +161,7 @@ export const commitStagedCardInputSchema = z
   })
   .strict();
 
-export const commitStagedCardsBatchInputSchema = z
+export const commitDraftsBatchInputSchema = z
   .object({
     profileId: profileIdSchema,
     items: z.array(
@@ -186,7 +176,7 @@ export const commitStagedCardsBatchInputSchema = z
   })
   .strict();
 
-export const discardStagedCardInputSchema = z
+export const discardDraftInputSchema = z
   .object({
     draftId: draftIdSchema,
     profileId: profileIdSchema,
@@ -194,7 +184,7 @@ export const discardStagedCardInputSchema = z
   })
   .strict();
 
-export const discardStagedCardsBatchInputSchema = z
+export const discardDraftsBatchInputSchema = z
   .object({
     profileId: profileIdSchema,
     items: z.array(
@@ -216,7 +206,7 @@ export const deprecateCardTypeDefinitionInputSchema = z
   })
   .strict();
 
-export const listStagedCardsInputSchema = z
+export const listDraftsInputSchema = z
   .object({
     profileId: profileIdSchema.optional(),
     states: z.array(draftStateSchema).optional(),
@@ -225,11 +215,11 @@ export const listStagedCardsInputSchema = z
   })
   .strict();
 
-export const cleanupStagedCardsInputSchema = z
+export const cleanupDraftsInputSchema = z
   .object({
     profileId: profileIdSchema,
     olderThanHours: z.number().int().min(1).max(24 * 30).optional(),
-    states: z.array(z.enum(['staged', 'superseded'])).optional(),
+    states: z.array(z.enum(['draft', 'superseded'])).optional(),
   })
   .strict();
 
@@ -240,15 +230,14 @@ export type GetNoteTypeSchemaInput = z.infer<typeof getNoteTypeSchemaInputSchema
 export type UpsertNoteTypeInput = z.infer<typeof upsertNoteTypeInputSchema>;
 export type UpsertCardTypeDefinitionInput = z.infer<typeof upsertCardTypeDefinitionInputSchema>;
 export type GetCardTypeSchemaInput = z.infer<typeof getCardTypeSchemaInputSchema>;
-export type ValidateCardFieldsInput = z.infer<typeof validateCardFieldsInputSchema>;
-export type CreateStagedCardInput = z.infer<typeof createStagedCardInputSchema>;
-export type CreateStagedCardsBatchInput = z.infer<typeof createStagedCardsBatchInputSchema>;
-export type GetStagedCardInput = z.infer<typeof getStagedCardInputSchema>;
-export type OpenStagedCardPreviewInput = z.infer<typeof openStagedCardPreviewInputSchema>;
-export type CommitStagedCardInput = z.infer<typeof commitStagedCardInputSchema>;
-export type CommitStagedCardsBatchInput = z.infer<typeof commitStagedCardsBatchInputSchema>;
-export type DiscardStagedCardInput = z.infer<typeof discardStagedCardInputSchema>;
-export type DiscardStagedCardsBatchInput = z.infer<typeof discardStagedCardsBatchInputSchema>;
+export type CreateDraftInput = z.infer<typeof createDraftInputSchema>;
+export type CreateDraftsBatchInput = z.infer<typeof createDraftsBatchInputSchema>;
+export type GetDraftInput = z.infer<typeof getDraftInputSchema>;
+export type OpenDraftPreviewInput = z.infer<typeof openDraftPreviewInputSchema>;
+export type CommitDraftInput = z.infer<typeof commitDraftInputSchema>;
+export type CommitDraftsBatchInput = z.infer<typeof commitDraftsBatchInputSchema>;
+export type DiscardDraftInput = z.infer<typeof discardDraftInputSchema>;
+export type DiscardDraftsBatchInput = z.infer<typeof discardDraftsBatchInputSchema>;
 export type DeprecateCardTypeDefinitionInput = z.infer<typeof deprecateCardTypeDefinitionInputSchema>;
-export type ListStagedCardsInput = z.infer<typeof listStagedCardsInputSchema>;
-export type CleanupStagedCardsInput = z.infer<typeof cleanupStagedCardsInputSchema>;
+export type ListDraftsInput = z.infer<typeof listDraftsInputSchema>;
+export type CleanupDraftsInput = z.infer<typeof cleanupDraftsInputSchema>;

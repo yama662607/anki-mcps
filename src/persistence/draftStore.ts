@@ -84,7 +84,7 @@ export class DraftStore {
         record.modTimestamp,
         record.clientRequestId,
         requestFingerprint,
-        record.stagedMarkerTag,
+        record.draftMarkerTag,
         record.createdAt,
         record.updatedAt,
       );
@@ -360,6 +360,7 @@ export class DraftStore {
       );
     `);
 
+    this.db.exec(`UPDATE drafts SET state = 'draft' WHERE state = 'staged'`);
     this.ensureCardTypeDefinitionColumns();
     this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_card_type_definitions_profile_status
@@ -397,7 +398,7 @@ function mapRowToDraft(row: DraftRow): DraftRecord {
     deckName: row.deck_name,
     modTimestamp: row.mod_timestamp,
     clientRequestId: row.client_request_id,
-    stagedMarkerTag: row.staged_marker_tag,
+    draftMarkerTag: row.staged_marker_tag,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     committedAt: row.committed_at ?? undefined,

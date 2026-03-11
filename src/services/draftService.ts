@@ -68,9 +68,9 @@ export class DraftService {
     });
 
     if (!validation.valid) {
-      throw new AppError('INVALID_ARGUMENT', 'Validation failed before staged creation', {
+      throw new AppError('INVALID_ARGUMENT', 'Validation failed before draft creation', {
         context: { errors: validation.errors },
-        hint: 'Fix required fields before create_staged_card.',
+        hint: 'Fix required fields before create_draft.',
       });
     }
 
@@ -87,8 +87,8 @@ export class DraftService {
           });
         }
       }
-      if (!sourceDraft || sourceDraft.state !== 'staged') {
-        throw new AppError('INVALID_SUPERSEDE_SOURCE', 'supersedesDraftId must reference a staged draft');
+      if (!sourceDraft || sourceDraft.state !== 'draft') {
+        throw new AppError('INVALID_SUPERSEDE_SOURCE', 'supersedesDraftId must reference an active draft');
       }
       chainDepth = sourceDraft.chainDepth + 1;
       this.store.updateDraftState({
@@ -127,7 +127,7 @@ export class DraftService {
       profileId,
       noteId: created.noteId,
       cardIds: created.cardIds,
-      state: 'staged',
+      state: 'draft',
       cardTypeId: cardType.cardTypeId,
       fingerprint,
       supersedesDraftId: input.supersedesDraftId,
@@ -137,7 +137,7 @@ export class DraftService {
       deckName: validation.normalized.deckName,
       modTimestamp: stagedSnapshot.modTimestamp,
       clientRequestId: input.clientRequestId,
-      stagedMarkerTag: this.config.stagedMarkerTag,
+      draftMarkerTag: this.config.stagedMarkerTag,
       createdAt: timestamp,
       updatedAt: timestamp,
     };
@@ -277,7 +277,7 @@ export class DraftService {
       });
     }
 
-    if (draft.state !== 'staged') {
+    if (draft.state !== 'draft') {
       throw new AppError('INVALID_STATE_TRANSITION', `Cannot commit draft in state: ${draft.state}`);
     }
 
@@ -293,7 +293,7 @@ export class DraftService {
 
     if (liveFingerprint !== draft.fingerprint) {
       throw new AppError('CONFLICT', 'Draft fingerprint mismatch before commit', {
-        hint: 'Create a superseding staged draft using current note content.',
+        hint: 'Create a superseding draft using current note content.',
         context: {
           draftId: draft.draftId,
           noteId: draft.noteId,
@@ -301,7 +301,7 @@ export class DraftService {
       });
     }
 
-    await this.ankiGateway.releaseStagedIsolation(draft.noteId, draft.cardIds, draft.stagedMarkerTag);
+    await this.ankiGateway.releaseStagedIsolation(draft.noteId, draft.cardIds, draft.draftMarkerTag);
 
     const committedAt = new Date().toISOString();
     this.store.updateDraftState({
@@ -452,7 +452,7 @@ export class DraftService {
   async cleanupStagedCards(input: {
     profileId: string;
     olderThanHours?: number;
-    states?: Array<'staged' | 'superseded'>;
+    states?: Array<'draft' | 'superseded'>;
   }): Promise<{
     contractVersion: '1.0.0';
     profileId: string;
@@ -468,7 +468,7 @@ export class DraftService {
     });
 
     const olderThanHours = input.olderThanHours ?? 72;
-    const states = input.states ?? ['staged', 'superseded'];
+    const states = input.states ?? ['draft', 'superseded'];
     const threshold = new Date(Date.now() - olderThanHours * 60 * 60 * 1000).toISOString();
     const candidates = this.store.listCleanupCandidates(profileId, states, threshold);
 

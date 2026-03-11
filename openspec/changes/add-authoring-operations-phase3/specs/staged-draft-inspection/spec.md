@@ -3,7 +3,7 @@
 ### Requirement: Draft detail inspection
 The system SHALL provide a read operation that returns the stored details for a single draft.
 
-#### Scenario: Read staged draft details
+#### Scenario: Read draft details
 - **WHEN** a client requests a draft by `draftId` and matching `profileId`
 - **THEN** the system returns the draft state, note identity, deck, tags, fields, timestamps, and card type identifiers
 - **AND** the response is sufficient for an agent to explain or supersede the draft without reopening the catalog
