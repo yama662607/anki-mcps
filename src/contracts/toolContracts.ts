@@ -219,7 +219,7 @@ export const TOOL_CONTRACTS_V1 = {
     },
     StarterPackSummary: {
       type: 'object',
-      required: ['packId', 'label', 'version', 'domains', 'supportedOptions'],
+      required: ['packId', 'label', 'version', 'domains', 'supportedOptions', 'source'],
       additionalProperties: false,
       properties: {
         packId: { type: 'string' },
@@ -227,7 +227,84 @@ export const TOOL_CONTRACTS_V1 = {
         version: { type: 'string' },
         domains: { type: 'array', items: { type: 'string' } },
         supportedOptions: { type: 'array', items: { $ref: '#/sharedTypes/StarterPackOptionDefinition' } },
+        source: { enum: ['builtin', 'custom'] },
       },
+    },
+    StarterPackManifest: {
+      type: 'object',
+      required: ['packId', 'label', 'version', 'domains', 'supportedOptions', 'deckRoots', 'tagTemplates', 'noteTypes', 'cardTypes'],
+      additionalProperties: false,
+      properties: {
+        packId: { type: 'string' },
+        label: { type: 'string' },
+        version: { type: 'string' },
+        domains: { type: 'array', items: { type: 'string' } },
+        supportedOptions: { type: 'array', items: { $ref: '#/sharedTypes/StarterPackOptionDefinition' } },
+        deckRoots: { type: 'array', items: { type: 'string' } },
+        tagTemplates: {
+          type: 'object',
+          additionalProperties: {
+            type: 'array',
+            items: { type: 'string' },
+          },
+        },
+        noteTypes: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['modelName', 'fields', 'templates'],
+            additionalProperties: false,
+            properties: {
+              modelName: { type: 'string' },
+              fields: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['name'],
+                  additionalProperties: false,
+                  properties: {
+                    name: { type: 'string' },
+                    description: { type: 'string' },
+                  },
+                },
+              },
+              templates: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['name', 'front', 'back'],
+                  additionalProperties: false,
+                  properties: {
+                    name: { type: 'string' },
+                    front: { type: 'string' },
+                    back: { type: 'string' },
+                  },
+                },
+              },
+              css: { type: 'string' },
+              isCloze: { type: 'boolean' },
+            },
+          },
+        },
+        cardTypes: { type: 'array', items: { $ref: '#/sharedTypes/CustomCardTypeDefinition' } },
+      },
+    },
+    CustomPackManifest: {
+      allOf: [
+        { $ref: '#/sharedTypes/StarterPackManifest' },
+        {
+          type: 'object',
+          required: ['source', 'profileId', 'status', 'updatedAt'],
+          additionalProperties: false,
+          properties: {
+            source: { const: 'custom' },
+            profileId: { type: 'string' },
+            status: { enum: ['active', 'deprecated'] },
+            updatedAt: { type: 'string' },
+            deprecatedAt: { type: 'string' },
+          },
+        },
+      ],
     },
     StarterPackOperation: {
       type: 'object',
@@ -306,6 +383,43 @@ export const TOOL_CONTRACTS_V1 = {
         },
       },
     },
+    list_pack_manifests: {
+      request: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          profileId: { type: 'string' },
+          includeDeprecated: { type: 'boolean' },
+        },
+      },
+      response: {
+        ...baseResponse,
+        required: [...baseResponse.required, 'items'],
+        properties: {
+          ...baseResponse.properties,
+          items: { type: 'array', items: { $ref: '#/sharedTypes/CustomPackManifest' } },
+        },
+      },
+    },
+    get_pack_manifest: {
+      request: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['packId'],
+        properties: {
+          profileId: { type: 'string' },
+          packId: { type: 'string' },
+        },
+      },
+      response: {
+        ...baseResponse,
+        required: [...baseResponse.required, 'pack'],
+        properties: {
+          ...baseResponse.properties,
+          pack: { $ref: '#/sharedTypes/CustomPackManifest' },
+        },
+      },
+    },
     get_note_type_schema: {
       request: {
         type: 'object',
@@ -350,6 +464,26 @@ export const TOOL_CONTRACTS_V1 = {
         },
       },
     },
+    upsert_pack_manifest: {
+      request: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['profileId', 'manifest'],
+        properties: {
+          profileId: { type: 'string' },
+          manifest: { $ref: '#/sharedTypes/StarterPackManifest' },
+        },
+      },
+      response: {
+        ...baseResponse,
+        required: [...baseResponse.required, 'status', 'pack'],
+        properties: {
+          ...baseResponse.properties,
+          status: { enum: ['created', 'updated'] },
+          pack: { $ref: '#/sharedTypes/CustomPackManifest' },
+        },
+      },
+    },
     apply_starter_pack: {
       request: {
         type: 'object',
@@ -362,10 +496,11 @@ export const TOOL_CONTRACTS_V1 = {
           dryRun: { type: 'boolean' },
           options: {
             type: 'object',
-            additionalProperties: false,
-            properties: {
-              deckRoot: { type: 'string' },
-              languages: { type: 'array', items: { type: 'string' } },
+            additionalProperties: {
+              oneOf: [
+                { type: 'string' },
+                { type: 'array', items: { type: 'string' } },
+              ],
             },
           },
         },
@@ -394,6 +529,25 @@ export const TOOL_CONTRACTS_V1 = {
               operations: { type: 'array', items: { $ref: '#/sharedTypes/StarterPackOperation' } },
             },
           },
+        },
+      },
+    },
+    deprecate_pack_manifest: {
+      request: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['profileId', 'packId'],
+        properties: {
+          profileId: { type: 'string' },
+          packId: { type: 'string' },
+        },
+      },
+      response: {
+        ...baseResponse,
+        required: [...baseResponse.required, 'pack'],
+        properties: {
+          ...baseResponse.properties,
+          pack: { $ref: '#/sharedTypes/CustomPackManifest' },
         },
       },
     },

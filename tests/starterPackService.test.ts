@@ -6,8 +6,10 @@ import { DraftStore } from '../src/persistence/draftStore.js';
 import { MemoryGateway } from '../src/gateway/memoryGateway.js';
 import { CatalogService } from '../src/services/catalogService.js';
 import { NoteTypeService } from '../src/services/noteTypeService.js';
+import { PackManifestService } from '../src/services/packManifestService.js';
 import { StarterPackService } from '../src/services/starterPackService.js';
 import { MediaService } from '../src/services/mediaService.js';
+import type { StarterPackManifest } from '../src/contracts/types.js';
 
 function createContext() {
   const dir = mkdtempSync(join(tmpdir(), 'anki-mcps-pack-'));
@@ -15,9 +17,10 @@ function createContext() {
   const gateway = new MemoryGateway();
   const catalogService = new CatalogService(store);
   const noteTypeService = new NoteTypeService(gateway, { activeProfileId: 'default' });
-  const starterPackService = new StarterPackService(noteTypeService, catalogService, { activeProfileId: 'default' });
+  const packManifestService = new PackManifestService(store, { activeProfileId: 'default' });
+  const starterPackService = new StarterPackService(noteTypeService, catalogService, packManifestService, { activeProfileId: 'default' });
   const mediaService = new MediaService(gateway, { activeProfileId: 'default' });
-  return { dir, store, gateway, catalogService, noteTypeService, starterPackService, mediaService };
+  return { dir, store, gateway, catalogService, noteTypeService, packManifestService, starterPackService, mediaService };
 }
 
 afterEach(() => {
@@ -25,6 +28,60 @@ afterEach(() => {
 });
 
 describe('StarterPackService', () => {
+  function customManifest(overrides: Partial<StarterPackManifest> = {}): StarterPackManifest {
+    return {
+      packId: 'custom.lang.ja-core',
+      label: 'Japanese Core',
+      version: '2026-03-12.v1',
+      domains: ['japanese'],
+      supportedOptions: [
+        {
+          name: 'deckRoot',
+          type: 'string',
+          required: false,
+          description: 'Deck root',
+          defaultValue: 'Languages::Japanese',
+        },
+      ],
+      deckRoots: ['Languages::Japanese'],
+      tagTemplates: {
+        'language.v1.japanese-vocab': ['domain::japanese', 'skill::vocabulary'],
+      },
+      noteTypes: [
+        {
+          modelName: 'language.v1.japanese-vocab',
+          fields: [{ name: 'Expression' }, { name: 'Meaning' }],
+          templates: [
+            {
+              name: 'Card 1',
+              front: '<div>{{Expression}}</div>',
+              back: '{{FrontSide}}<hr id="answer"><div>{{Meaning}}</div>',
+            },
+          ],
+          css: '.card { color: white; background: black; }',
+        },
+      ],
+      cardTypes: [
+        {
+          cardTypeId: 'language.v1.japanese-vocab',
+          label: 'Japanese Vocabulary',
+          modelName: 'language.v1.japanese-vocab',
+          defaultDeck: 'Languages::Japanese::Vocabulary',
+          source: 'custom',
+          requiredFields: ['Expression', 'Meaning'],
+          optionalFields: [],
+          renderIntent: 'recognition',
+          allowedHtmlPolicy: 'safe_inline_html',
+          fields: [
+            { name: 'Expression', required: true, type: 'text', allowedHtmlPolicy: 'safe_inline_html' },
+            { name: 'Meaning', required: true, type: 'markdown', allowedHtmlPolicy: 'safe_inline_html', multiline: true },
+          ],
+        },
+      ],
+      ...overrides,
+    };
+  }
+
   it('lists available starter packs with supported options', async () => {
     const context = createContext();
 
@@ -113,6 +170,107 @@ describe('StarterPackService', () => {
       expect(definitions).toContain('programming.v1.typescript-output');
       expect(definitions).toContain('programming.v1.python-build');
       expect(definitions).not.toContain('programming.v1.rust-output');
+    } finally {
+      context.store.close();
+      rmSync(context.dir, { recursive: true, force: true });
+    }
+  });
+
+  it('merges active custom manifests into starter-pack discovery and applies them safely', async () => {
+    const context = createContext();
+
+    try {
+      await context.packManifestService.upsertPackManifest({
+        profileId: 'default',
+        manifest: customManifest(),
+      });
+
+      const listed = await context.starterPackService.listStarterPacks({ profileId: 'default' });
+      expect(listed.packs.find((item) => item.packId === 'custom.lang.ja-core')?.source).toBe('custom');
+
+      const applied = await context.starterPackService.applyStarterPack({
+        profileId: 'default',
+        packId: 'custom.lang.ja-core',
+        dryRun: false,
+      });
+
+      expect(applied.pack.packId).toBe('custom.lang.ja-core');
+      expect(context.catalogService.listCardTypeDefinitions('default').items.some((item) => item.cardTypeId === 'language.v1.japanese-vocab')).toBe(true);
+      expect(context.packManifestService.listPackResourceBindings('default', 'custom.lang.ja-core')).toEqual([
+        {
+          profileId: 'default',
+          packId: 'custom.lang.ja-core',
+          resourceType: 'card_type_definition',
+          resourceId: 'language.v1.japanese-vocab',
+          updatedAt: expect.any(String),
+        },
+        {
+          profileId: 'default',
+          packId: 'custom.lang.ja-core',
+          resourceType: 'note_type',
+          resourceId: 'language.v1.japanese-vocab',
+          updatedAt: expect.any(String),
+        },
+      ]);
+    } finally {
+      context.store.close();
+      rmSync(context.dir, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects missing required options and unmanaged conflicting updates for custom packs', async () => {
+    const context = createContext();
+
+    try {
+      await context.packManifestService.upsertPackManifest({
+        profileId: 'default',
+        manifest: customManifest({
+          supportedOptions: [
+            {
+              name: 'difficulty',
+              type: 'string',
+              required: true,
+              description: 'Difficulty band',
+            },
+          ],
+        }),
+      });
+
+      await expect(
+        context.starterPackService.applyStarterPack({
+          profileId: 'default',
+          packId: 'custom.lang.ja-core',
+          dryRun: true,
+        }),
+      ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
+
+      await context.noteTypeService.upsertNoteType({
+        profileId: 'default',
+        modelName: 'language.v1.japanese-vocab',
+        dryRun: false,
+        fields: [{ name: 'Expression' }, { name: 'Meaning' }],
+        templates: [
+          {
+            name: 'Card 1',
+            front: '<div>{{Expression}}</div>',
+            back: '{{FrontSide}}<hr id=\"answer\"><div>{{Meaning}}</div><div>existing</div>',
+          },
+        ],
+        css: '.card { color: red; }',
+      });
+
+      await context.packManifestService.upsertPackManifest({
+        profileId: 'default',
+        manifest: customManifest(),
+      });
+
+      await expect(
+        context.starterPackService.applyStarterPack({
+          profileId: 'default',
+          packId: 'custom.lang.ja-core',
+          dryRun: true,
+        }),
+      ).rejects.toMatchObject({ code: 'CONFLICT' });
     } finally {
       context.store.close();
       rmSync(context.dir, { recursive: true, force: true });

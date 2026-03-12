@@ -1,9 +1,10 @@
 import { AppError } from '../contracts/errors.js';
-import { PACK_CATALOG_VERSION, SUPPORTED_PROGRAMMING_LANGUAGES, listStarterPacks, resolveStarterPack } from '../contracts/starterPacks.js';
-import type { StarterPackManifest, StarterPackOperation, StarterPackSummary } from '../contracts/types.js';
+import { PACK_CATALOG_VERSION, listStarterPacks as listBuiltinStarterPacks, resolveStarterPack } from '../contracts/starterPacks.js';
+import type { PackResourceType, StarterPackManifest, StarterPackOperation, StarterPackOptionDefinition, StarterPackOptionValue, StarterPackSummary } from '../contracts/types.js';
 import { CatalogService } from './catalogService.js';
 import { NoteTypeService } from './noteTypeService.js';
 import { resolveProfileId } from '../utils/profile.js';
+import { PackManifestService } from './packManifestService.js';
 
 type StarterPackServiceConfig = {
   activeProfileId?: string;
@@ -13,6 +14,7 @@ export class StarterPackService {
   constructor(
     private readonly noteTypeService: NoteTypeService,
     private readonly catalogService: CatalogService,
+    private readonly packManifestService: PackManifestService,
     private readonly config: StarterPackServiceConfig,
   ) {}
 
@@ -32,7 +34,7 @@ export class StarterPackService {
       contractVersion: '1.0.0',
       profileId,
       packCatalogVersion: PACK_CATALOG_VERSION,
-      packs: listStarterPacks(),
+      packs: this.listMergedPacks(profileId),
     };
   }
 
@@ -41,7 +43,7 @@ export class StarterPackService {
       contractVersion: '1.0.0',
       profileId: profileId ?? this.config.activeProfileId ?? 'default',
       packCatalogVersion: PACK_CATALOG_VERSION,
-      packs: listStarterPacks(),
+      packs: this.listMergedPacks(profileId ?? this.config.activeProfileId ?? 'default'),
     };
   }
 
@@ -51,8 +53,7 @@ export class StarterPackService {
     version?: string;
     dryRun?: boolean;
     options?: {
-      deckRoot?: string;
-      languages?: string[];
+      [key: string]: StarterPackOptionValue;
     };
   }): Promise<{
     contractVersion: '1.0.0';
@@ -73,17 +74,17 @@ export class StarterPackService {
     });
 
     if (input.version && input.version !== PACK_CATALOG_VERSION) {
-      throw new AppError('INVALID_ARGUMENT', `Unsupported starter pack version: ${input.version}`, {
-        hint: `Use version ${PACK_CATALOG_VERSION}.`,
-      });
+      const builtin = resolveStarterPack(input.packId);
+      if (builtin) {
+        throw new AppError('INVALID_ARGUMENT', `Unsupported starter pack version: ${input.version}`, {
+          hint: `Use version ${PACK_CATALOG_VERSION}.`,
+        });
+      }
     }
 
-    this.assertOptions(input.packId, input.options);
-
-    const manifest = resolveStarterPack(input.packId, input.options);
-    if (!manifest) {
-      throw new AppError('NOT_FOUND', `Unknown starter pack: ${input.packId}`);
-    }
+    const resolved = this.resolveManifest(profileId, input.packId, input.version, input.options);
+    const { manifest, source } = resolved;
+    const managedBindings: Array<{ resourceType: PackResourceType; resourceId: string }> = [];
 
     const dryRun = input.dryRun ?? true;
     const operations: StarterPackOperation[] = [];
@@ -99,6 +100,12 @@ export class StarterPackService {
         dryRun: true,
       });
       const status = this.classifyNoteTypeOperation(planned.result.operations);
+
+      if (source === 'custom') {
+        this.assertOwnership(profileId, manifest.packId, 'note_type', noteType.modelName, status);
+        managedBindings.push({ resourceType: 'note_type', resourceId: noteType.modelName });
+      }
+
       operations.push({ kind: 'note_type', id: noteType.modelName, status });
 
       if (!dryRun && status !== 'unchanged') {
@@ -116,6 +123,12 @@ export class StarterPackService {
 
     for (const cardType of manifest.cardTypes) {
       const status = this.catalogService.planCustomCardTypeDefinition(profileId, cardType);
+
+      if (source === 'custom') {
+        this.assertOwnership(profileId, manifest.packId, 'card_type_definition', cardType.cardTypeId, status);
+        managedBindings.push({ resourceType: 'card_type_definition', resourceId: cardType.cardTypeId });
+      }
+
       operations.push({ kind: 'card_type_definition', id: cardType.cardTypeId, status });
       if (!dryRun && status !== 'unchanged') {
         this.catalogService.upsertCustomCardTypeDefinition(profileId, cardType);
@@ -124,6 +137,10 @@ export class StarterPackService {
 
     for (const deckRoot of manifest.deckRoots) {
       operations.push({ kind: 'deck_root', id: deckRoot, status: 'unchanged' });
+    }
+
+    if (!dryRun && source === 'custom') {
+      this.packManifestService.replacePackResourceBindings(profileId, manifest.packId, managedBindings);
     }
 
     return {
@@ -149,6 +166,7 @@ export class StarterPackService {
       version: manifest.version,
       domains: [...manifest.domains],
       supportedOptions: manifest.supportedOptions.map((option) => ({ ...option })),
+      source: manifest.source ?? 'builtin',
     };
   }
 
@@ -165,31 +183,153 @@ export class StarterPackService {
   }
 
   private assertOptions(
+    profileId: string,
     packId: string,
     options?: {
-      deckRoot?: string;
-      languages?: string[];
+      [key: string]: StarterPackOptionValue;
     },
+  ): Record<string, StarterPackOptionValue> {
+    const supportedOptions = this.resolveManifestForValidation(profileId, packId).supportedOptions;
+    const supportedByName = new Map(supportedOptions.map((option) => [option.name, option]));
+    const normalized: Record<string, StarterPackOptionValue> = {};
+
+    for (const option of supportedOptions) {
+      const value = options?.[option.name];
+      if (value === undefined) {
+        if (option.defaultValue !== undefined) {
+          normalized[option.name] = Array.isArray(option.defaultValue)
+            ? [...option.defaultValue]
+            : option.defaultValue;
+          continue;
+        }
+        if (option.required) {
+          throw new AppError('INVALID_ARGUMENT', `Missing required option for pack ${packId}: ${option.name}`);
+        }
+        continue;
+      }
+      normalized[option.name] = this.validateOptionValue(packId, option, value);
+    }
+
+    for (const [name, value] of Object.entries(options ?? {})) {
+      const option = supportedByName.get(name);
+      if (!option) {
+        throw new AppError('INVALID_ARGUMENT', `Unsupported option for pack ${packId}: ${name}`);
+      }
+    }
+
+    return normalized;
+  }
+
+  private resolveManifestForValidation(profileId: string, packId: string): StarterPackManifest {
+    const builtin = resolveStarterPack(packId);
+    if (builtin) {
+      return builtin;
+    }
+
+    const custom = this.packManifestService.getActivePackManifest(profileId, packId);
+    if (!custom) {
+      throw new AppError('NOT_FOUND', `Unknown starter pack: ${packId}`);
+    }
+    return custom;
+  }
+
+  private resolveManifest(
+    profileId: string,
+    packId: string,
+    version?: string,
+    options?: Record<string, StarterPackOptionValue>,
+  ): { manifest: StarterPackManifest; source: 'builtin' | 'custom' } {
+    const normalizedOptions = this.assertOptions(profileId, packId, options);
+    const builtin = resolveStarterPack(packId, normalizedOptions);
+    if (builtin) {
+      if (version && version !== builtin.version) {
+        throw new AppError('INVALID_ARGUMENT', `Unsupported starter pack version: ${version}`, {
+          hint: `Use version ${builtin.version}.`,
+        });
+      }
+      return {
+        manifest: builtin,
+        source: 'builtin',
+      };
+    }
+
+    const custom = this.packManifestService.getActivePackManifest(profileId, packId);
+    if (!custom) {
+      throw new AppError('NOT_FOUND', `Unknown starter pack: ${packId}`);
+    }
+    if (version && version !== custom.version) {
+      throw new AppError('INVALID_ARGUMENT', `Unsupported starter pack version: ${version}`, {
+        hint: `Use version ${custom.version}.`,
+      });
+    }
+    return {
+      manifest: custom,
+      source: 'custom',
+    };
+  }
+
+  private validateOptionValue(
+    packId: string,
+    option: StarterPackOptionDefinition,
+    value: StarterPackOptionValue,
+  ): StarterPackOptionValue {
+    if (option.type === 'string') {
+      if (typeof value !== 'string' || value.trim().length === 0) {
+        throw new AppError('INVALID_ARGUMENT', `Option ${option.name} must be a non-empty string`);
+      }
+      this.assertAllowedValues(option, [value]);
+      return value;
+    }
+
+    if (!Array.isArray(value) || value.length === 0 || value.some((item) => item.trim().length === 0)) {
+      throw new AppError('INVALID_ARGUMENT', `Option ${option.name} must be a non-empty string array`);
+    }
+    this.assertAllowedValues(option, value);
+    return [...value];
+  }
+
+  private assertAllowedValues(option: StarterPackOptionDefinition, values: string[]): void {
+    if (!option.allowedValues) {
+      return;
+    }
+    const invalid = values.filter((item) => !option.allowedValues?.includes(item));
+    if (invalid.length > 0) {
+      throw new AppError('INVALID_ARGUMENT', `Unsupported values for option ${option.name}: ${invalid.join(', ')}`, {
+        hint: `Supported values: ${option.allowedValues.join(', ')}`,
+      });
+    }
+  }
+
+  private assertOwnership(
+    profileId: string,
+    packId: string,
+    resourceType: PackResourceType,
+    resourceId: string,
+    status: 'create' | 'update' | 'unchanged',
   ): void {
-    if (!options) {
+    const owner = this.packManifestService.getPackResourceOwner(profileId, resourceType, resourceId);
+    if (!owner) {
+      if (status === 'update') {
+        throw new AppError('CONFLICT', `Custom pack cannot take over unmanaged ${resourceType}: ${resourceId}`, {
+          hint: 'Use a new identifier or migrate ownership manually by recreating the resource under the pack.',
+          context: { resourceType, resourceId, owner: 'unmanaged' },
+        });
+      }
       return;
     }
 
-    if (options.deckRoot !== undefined && options.deckRoot.trim().length === 0) {
-      throw new AppError('INVALID_ARGUMENT', 'deckRoot must not be empty');
+    if (owner.packId !== packId) {
+      throw new AppError('CONFLICT', `Custom pack cannot modify ${resourceType} owned by another pack: ${resourceId}`, {
+        hint: `Owned by pack ${owner.packId}. Use a new identifier instead of taking over shared resources.`,
+        context: { resourceType, resourceId, ownerPackId: owner.packId },
+      });
     }
+  }
 
-    if (options.languages) {
-      if (packId !== 'programming-core') {
-        throw new AppError('INVALID_ARGUMENT', 'languages option is only valid for programming-core');
-      }
-
-      const invalid = options.languages.filter((language) => !SUPPORTED_PROGRAMMING_LANGUAGES.includes(language as any));
-      if (invalid.length > 0) {
-        throw new AppError('INVALID_ARGUMENT', `Unsupported programming languages: ${invalid.join(', ')}`, {
-          hint: `Supported values: ${SUPPORTED_PROGRAMMING_LANGUAGES.join(', ')}`,
-        });
-      }
-    }
+  private listMergedPacks(profileId: string): StarterPackSummary[] {
+    return [
+      ...listBuiltinStarterPacks().map((pack) => ({ ...pack, source: 'builtin' as const })),
+      ...this.packManifestService.listActivePackSummaries(profileId),
+    ].sort((left, right) => left.packId.localeCompare(right.packId));
   }
 }

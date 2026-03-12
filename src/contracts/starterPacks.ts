@@ -4,6 +4,7 @@ import type {
   NoteTypeField,
   NoteTypeTemplate,
   StarterPackManifest,
+  StarterPackOptionValue,
   StarterPackSummary,
 } from './types.js';
 
@@ -22,8 +23,7 @@ export const SUPPORTED_PROGRAMMING_LANGUAGES = [
 export type ProgrammingLanguage = (typeof SUPPORTED_PROGRAMMING_LANGUAGES)[number];
 
 type StarterPackOptions = {
-  deckRoot?: string;
-  languages?: string[];
+  [key: string]: StarterPackOptionValue | undefined;
 };
 
 const sharedCardCss = `
@@ -158,7 +158,7 @@ function toTitleCase(value: string): string {
 }
 
 function createEnglishManifest(options?: StarterPackOptions): StarterPackManifest {
-  const deckRoot = options?.deckRoot ?? 'Languages::English';
+  const deckRoot = typeof options?.deckRoot === 'string' ? options.deckRoot : 'Languages::English';
   return {
     packId: 'english-core',
     label: 'English Core',
@@ -259,8 +259,10 @@ function createEnglishManifest(options?: StarterPackOptions): StarterPackManifes
 }
 
 function createProgrammingManifest(options?: StarterPackOptions): StarterPackManifest {
-  const deckRoot = options?.deckRoot ?? 'Programming';
-  const languages = (options?.languages?.length ? options.languages : [...SUPPORTED_PROGRAMMING_LANGUAGES]) as string[];
+  const deckRoot = typeof options?.deckRoot === 'string' ? options.deckRoot : 'Programming';
+  const languages = Array.isArray(options?.languages) && options.languages.length > 0
+    ? options.languages
+    : [...SUPPORTED_PROGRAMMING_LANGUAGES];
 
   const sharedNoteTypes = [
     {
@@ -431,7 +433,7 @@ function createProgrammingManifest(options?: StarterPackOptions): StarterPackMan
 }
 
 function createFundamentalsManifest(options?: StarterPackOptions): StarterPackManifest {
-  const deckRoot = options?.deckRoot ?? 'Fundamentals';
+  const deckRoot = typeof options?.deckRoot === 'string' ? options.deckRoot : 'Fundamentals';
   return {
     packId: 'fundamentals-core',
     label: 'Fundamentals Core',

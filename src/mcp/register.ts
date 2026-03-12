@@ -7,16 +7,20 @@ import {
   createDraftsBatchInputSchema,
   createDraftInputSchema,
   deprecateCardTypeDefinitionInputSchema,
+  deprecatePackManifestInputSchema,
   importMediaAssetInputSchema,
   getCardTypeSchemaInputSchema,
   getNoteTypeSchemaInputSchema,
+  getPackManifestInputSchema,
   getDraftInputSchema,
   listCardTypeDefinitionsInputSchema,
   listCardTypesInputSchema,
   listNoteTypesInputSchema,
+  listPackManifestsInputSchema,
   listStarterPacksInputSchema,
   listDraftsInputSchema,
   openDraftPreviewInputSchema,
+  upsertPackManifestInputSchema,
   upsertCardTypeDefinitionInputSchema,
   upsertNoteTypeInputSchema,
   discardDraftsBatchInputSchema,
@@ -26,6 +30,7 @@ import { CatalogService } from '../services/catalogService.js';
 import { DraftService } from '../services/draftService.js';
 import { MediaService } from '../services/mediaService.js';
 import { NoteTypeService } from '../services/noteTypeService.js';
+import { PackManifestService } from '../services/packManifestService.js';
 import { StarterPackService } from '../services/starterPackService.js';
 import { getContractsResourcePayload } from './contractsResource.js';
 import { errorResult, parseOrThrow, successResult } from './result.js';
@@ -36,6 +41,7 @@ export function registerMcpHandlers(server: McpServer, services: {
   draftService: DraftService;
   noteTypeService: NoteTypeService;
   starterPackService: StarterPackService;
+  packManifestService: PackManifestService;
   mediaService: MediaService;
 }) {
   server.registerResource(
@@ -244,6 +250,42 @@ export function registerMcpHandlers(server: McpServer, services: {
   );
 
   server.registerTool(
+    'list_pack_manifests',
+    {
+      title: 'List Pack Manifests',
+      description: 'List profile-scoped reusable custom pack manifests. Active only by default.',
+      inputSchema: listPackManifestsInputSchema,
+      annotations: { readOnlyHint: true },
+    },
+    async (input) => {
+      try {
+        const args = parseOrThrow(listPackManifestsInputSchema, input);
+        return successResult(await services.packManifestService.listPackManifests(args));
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    'get_pack_manifest',
+    {
+      title: 'Get Pack Manifest',
+      description: 'Read the full manifest for one reusable custom pack.',
+      inputSchema: getPackManifestInputSchema,
+      annotations: { readOnlyHint: true },
+    },
+    async (input) => {
+      try {
+        const args = parseOrThrow(getPackManifestInputSchema, input);
+        return successResult(await services.packManifestService.getPackManifest(args));
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  server.registerTool(
     'get_note_type_schema',
     {
       title: 'Get Note Type Schema',
@@ -280,6 +322,24 @@ export function registerMcpHandlers(server: McpServer, services: {
   );
 
   server.registerTool(
+    'upsert_pack_manifest',
+    {
+      title: 'Upsert Pack Manifest',
+      description: 'Store a reusable custom pack manifest without applying it to Anki yet.',
+      inputSchema: upsertPackManifestInputSchema,
+      annotations: { readOnlyHint: false, destructiveHint: false },
+    },
+    async (input) => {
+      try {
+        const args = parseOrThrow(upsertPackManifestInputSchema, input);
+        return successResult(await services.packManifestService.upsertPackManifest(args));
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  server.registerTool(
     'apply_starter_pack',
     {
       title: 'Apply Starter Pack',
@@ -291,6 +351,24 @@ export function registerMcpHandlers(server: McpServer, services: {
       try {
         const args = parseOrThrow(applyStarterPackInputSchema, input);
         return successResult(await services.starterPackService.applyStarterPack(args));
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    'deprecate_pack_manifest',
+    {
+      title: 'Deprecate Pack Manifest',
+      description: 'Mark a custom reusable pack manifest as deprecated without deleting it.',
+      inputSchema: deprecatePackManifestInputSchema,
+      annotations: { readOnlyHint: false, destructiveHint: false },
+    },
+    async (input) => {
+      try {
+        const args = parseOrThrow(deprecatePackManifestInputSchema, input);
+        return successResult(await services.packManifestService.deprecatePackManifest(args));
       } catch (error) {
         return errorResult(error);
       }
