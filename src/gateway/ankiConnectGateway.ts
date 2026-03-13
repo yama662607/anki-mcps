@@ -169,13 +169,26 @@ export class AnkiConnectGateway implements AnkiGateway {
 
   async listNoteTypes(): Promise<NoteTypeSummaryResult[]> {
     const modelNames = await this.call<string[]>('modelNames', {});
-    const schemas = await Promise.all(modelNames.map(async (modelName) => this.getNoteTypeSchema(modelName)));
-    return schemas.map((schema) => ({
-      modelName: schema.modelName,
-      fieldNames: [...schema.fieldNames],
-      templateNames: schema.templates.map((template) => template.name),
-      isCloze: schema.isCloze,
-    }));
+    const summaries: NoteTypeSummaryResult[] = [];
+
+    for (const modelName of modelNames) {
+      const fieldNames = await this.call<string[]>('modelFieldNames', { modelName });
+      const rawTemplates = await this.call<Record<string, { Front?: string; Back?: string }>>('modelTemplates', { modelName });
+      const templates = Object.entries(rawTemplates).map(([name, template]) => ({
+        name,
+        front: template.Front ?? '',
+        back: template.Back ?? '',
+      }));
+
+      summaries.push({
+        modelName,
+        fieldNames,
+        templateNames: templates.map((template) => template.name),
+        isCloze: this.detectCloze(templates),
+      });
+    }
+
+    return summaries;
   }
 
   async getNoteTypeSchema(modelName: string): Promise<NoteTypeSchemaResult> {

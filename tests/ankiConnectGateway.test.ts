@@ -206,6 +206,62 @@ describe('AnkiConnectGateway', () => {
     expect(schema.fieldsOnTemplates['Card 1']).toEqual({ front: ['Prompt'], back: ['Answer'] });
   });
 
+  it('lists note types with lightweight summary requests instead of full schema fan-out', async () => {
+    const calls: FetchCall[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        const body = JSON.parse(String(init?.body)) as { action: string; params: Record<string, unknown> };
+        calls.push({ action: body.action, params: body.params });
+
+        if (body.action === 'modelNames') return ok(['Basic', 'Cloze']);
+        if (body.action === 'modelFieldNames' && body.params.modelName === 'Basic') return ok(['Front', 'Back']);
+        if (body.action === 'modelFieldNames' && body.params.modelName === 'Cloze') return ok(['Text', 'Extra']);
+        if (body.action === 'modelTemplates' && body.params.modelName === 'Basic') {
+          return ok({
+            'Card 1': {
+              Front: '{{Front}}',
+              Back: '{{FrontSide}}<hr id=answer>{{Back}}',
+            },
+          });
+        }
+        if (body.action === 'modelTemplates' && body.params.modelName === 'Cloze') {
+          return ok({
+            Cloze: {
+              Front: '{{cloze:Text}}',
+              Back: '{{cloze:Text}}<br>{{Extra}}',
+            },
+          });
+        }
+        throw new Error(`unexpected action: ${body.action}`);
+      }),
+    );
+
+    const gateway = new AnkiConnectGateway('http://127.0.0.1:8765');
+    await expect(gateway.listNoteTypes()).resolves.toEqual([
+      {
+        modelName: 'Basic',
+        fieldNames: ['Front', 'Back'],
+        templateNames: ['Card 1'],
+        isCloze: false,
+      },
+      {
+        modelName: 'Cloze',
+        fieldNames: ['Text', 'Extra'],
+        templateNames: ['Cloze'],
+        isCloze: true,
+      },
+    ]);
+
+    expect(calls.map((call) => call.action)).toEqual([
+      'modelNames',
+      'modelFieldNames',
+      'modelTemplates',
+      'modelFieldNames',
+      'modelTemplates',
+    ]);
+  });
+
   it('creates and updates note types through model actions', async () => {
     const calls: FetchCall[] = [];
     vi.stubGlobal(
