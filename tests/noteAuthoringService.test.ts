@@ -206,6 +206,72 @@ describe('NoteAuthoringService', () => {
     store.close();
   });
 
+  it('rejects update_note when tags briefly appear and then revert', async () => {
+    const store = new AuthoringStore(dbPath);
+    const gateway = new MemoryGateway();
+    const noteTypeService = new NoteTypeService(gateway, { activeProfileId: 'default' });
+    const noteAuthoringService = new NoteAuthoringService(store, gateway, {
+      activeProfileId: 'default',
+      tagReadbackAttempts: 3,
+      tagReadbackDelayMs: 0,
+    });
+
+    await noteTypeService.upsertNoteType({
+      profileId: 'default',
+      modelName: 'ts.v1.concept',
+      dryRun: false,
+      fields: [{ name: 'Prompt' }, { name: 'Answer' }],
+      templates: [{ name: 'Card 1', front: '{{Prompt}}', back: '{{FrontSide}}<hr id=answer>{{Answer}}' }],
+    });
+    await noteAuthoringService.ensureDeck({
+      profileId: 'default',
+      deckName: 'Programming::TypeScript::Concept',
+    });
+
+    const added = await noteAuthoringService.addNote({
+      profileId: 'default',
+      deckName: 'Programming::TypeScript::Concept',
+      modelName: 'ts.v1.concept',
+      fields: {
+        Prompt: 'interface と type の違いは？',
+        Answer: '用途次第です。',
+      },
+      tags: ['language::typescript'],
+    });
+
+    const originalGetNoteSnapshot = gateway.getNoteSnapshot.bind(gateway);
+    let readCountAfterUpdate = 0;
+    gateway.replaceNoteTags = async (_noteId, _currentTags, nextTags) => {
+      gateway.mutateNote(added.note.noteId, (note) => {
+        note.tags = [...nextTags];
+      });
+    };
+    gateway.getNoteSnapshot = async (noteId) => {
+      const snapshot = await originalGetNoteSnapshot(noteId);
+      if (noteId !== added.note.noteId || readCountAfterUpdate >= 2) {
+        return snapshot;
+      }
+      readCountAfterUpdate += 1;
+      if (readCountAfterUpdate === 2) {
+        gateway.mutateNote(added.note.noteId, (note) => {
+          note.tags = ['language::typescript'];
+        });
+      }
+      return snapshot;
+    };
+
+    await expect(
+      noteAuthoringService.updateNote({
+        profileId: 'default',
+        noteId: added.note.noteId,
+        expectedModTimestamp: added.note.modTimestamp,
+        tags: ['language::typescript', 'reviewed'],
+      }),
+    ).rejects.toMatchObject({ code: 'DEPENDENCY_UNAVAILABLE' });
+
+    store.close();
+  });
+
   it('deletes notes idempotently in batch form', async () => {
     const { store, noteTypeService, noteAuthoringService } = createServices();
 

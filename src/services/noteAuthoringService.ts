@@ -8,6 +8,8 @@ import { resolveProfileId } from '../utils/profile.js';
 
 type NoteAuthoringServiceConfig = {
   activeProfileId?: string;
+  tagReadbackAttempts?: number;
+  tagReadbackDelayMs?: number;
 };
 
 export class NoteAuthoringService {
@@ -296,17 +298,9 @@ export class NoteAuthoringService {
       await this.ankiGateway.replaceNoteTags(input.noteId, snapshot.tags, normalized.tags);
     }
 
-    const updated = await this.ankiGateway.getNoteSnapshot(input.noteId);
-    if (input.tags && !this.sameTags(updated.tags, normalized.tags)) {
-      throw new AppError('DEPENDENCY_UNAVAILABLE', 'Updated note tags did not persist in Anki', {
-        hint: 'Read the note again before retrying. The Anki backend accepted the update but returned different tags.',
-        context: {
-          noteId: input.noteId,
-          requestedTags: normalized.tags,
-          persistedTags: updated.tags,
-        },
-      });
-    }
+    const updated = input.tags
+      ? await this.readStableTaggedNote(input.noteId, normalized.tags)
+      : await this.ankiGateway.getNoteSnapshot(input.noteId);
     this.logLifecycleEvent('note_updated', {
       profileId,
       noteId: updated.noteId,
@@ -571,6 +565,47 @@ export class NoteAuthoringService {
       return false;
     }
     return left.every((tag, index) => tag === right[index]);
+  }
+
+  private async readStableTaggedNote(noteId: number, expectedTags: string[]): Promise<NoteSnapshot> {
+    const attempts = Math.max(this.config.tagReadbackAttempts ?? 4, 2);
+    const delayMs = Math.max(this.config.tagReadbackDelayMs ?? 120, 0);
+    let lastSnapshot: NoteSnapshot | undefined;
+    let consecutiveMatches = 0;
+
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      const snapshot = await this.ankiGateway.getNoteSnapshot(noteId);
+      lastSnapshot = snapshot;
+
+      if (this.sameTags(snapshot.tags, expectedTags)) {
+        consecutiveMatches += 1;
+        if (consecutiveMatches >= 2) {
+          return snapshot;
+        }
+      } else {
+        consecutiveMatches = 0;
+      }
+
+      if (attempt < attempts - 1) {
+        await this.sleep(delayMs);
+      }
+    }
+
+    throw new AppError('DEPENDENCY_UNAVAILABLE', 'Updated note tags did not persist in Anki', {
+      hint: 'Read the note again before retrying. The Anki backend accepted the update but returned different tags.',
+      context: {
+        noteId,
+        requestedTags: expectedTags,
+        persistedTags: lastSnapshot?.tags ?? [],
+      },
+    });
+  }
+
+  private async sleep(delayMs: number): Promise<void> {
+    if (delayMs <= 0) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
 
   private toNoteSummary(snapshot: NoteSnapshot): NoteSummary {

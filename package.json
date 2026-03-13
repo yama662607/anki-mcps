@@ -1,6 +1,6 @@
 {
   "name": "anki-mcps",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "MCP server for safe, review-first Anki authoring on official Anki concepts",
   "type": "module",
   "private": false,
