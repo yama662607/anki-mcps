@@ -14,7 +14,7 @@ Requirements:
 
 - Anki is running
 - AnkiConnect is installed and enabled
-- optional: `anki-connect-extension` is installed if you want direct preview instead of edit-dialog fallback
+- optional: `anki-connect-extension` is installed if you want a read-only native preview instead of edit-dialog fallback
 
 By default, `anki-mcps` talks to:
 
@@ -73,7 +73,7 @@ Ask your agent to call:
 This tells you whether:
 
 - AnkiConnect is reachable
-- the optional extension preview path is available
+- the optional extension preview path is available as a read-only native previewer
 - the server is accidentally running in memory mode
 
 ## 5. Follow the normal authoring flow
@@ -100,7 +100,7 @@ That forces the agent to inspect the current collection before writing anything.
 ## Troubleshooting
 
 - `Failed to fetch`: Anki or AnkiConnect is not reachable at `ANKI_CONNECT_URL`
-- preview opens the edit dialog instead: install `anki-connect-extension` if you want direct preview
+- preview opens the edit dialog instead: install `anki-connect-extension` if you want the safer read-only native preview path
 - write tools reject with `PROFILE_SCOPE_MISMATCH`: pass the correct `profileId`
 
 ## Next docs

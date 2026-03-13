@@ -216,6 +216,27 @@ describe('MCP server', () => {
       expect(updated.note.fields.DetailedExplanation).toContain('型チェック');
       expect(updated.note.tags).toEqual(['language::typescript', 'reviewed']);
 
+      const reread = parseToolResult(await context.client.callTool({
+        name: 'get_notes',
+        arguments: {
+          profileId: 'default',
+          noteIds: [added.note.noteId],
+        },
+      }));
+      expect(reread.results[0].ok).toBe(true);
+      expect(reread.results[0].note.tags).toEqual(['language::typescript', 'reviewed']);
+
+      const reviewedSearch = parseToolResult(await context.client.callTool({
+        name: 'search_notes',
+        arguments: {
+          profileId: 'default',
+          deckNames: ['Programming::TypeScript::Concept'],
+          tags: ['reviewed'],
+          limit: 10,
+        },
+      }));
+      expect(reviewedSearch.notes.map((note: { noteId: number }) => note.noteId)).toContain(added.note.noteId);
+
       const released = parseToolResult(await context.client.callTool({
         name: 'set_note_cards_suspended',
         arguments: {

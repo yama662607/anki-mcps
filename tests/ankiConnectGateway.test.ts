@@ -59,9 +59,8 @@ describe('AnkiConnectGateway', () => {
         const body = JSON.parse(String(init?.body)) as { action: string; params: Record<string, unknown> };
         calls.push({ action: body.action, params: body.params });
 
-        if (body.action === 'guiBrowse') return ok([3001]);
-        if (body.action === 'guiSelectCard') return ok(true);
         if (body.action === 'apiReflect') return ok({ actions: ['guiPreviewNote'] });
+        if (body.action === 'findCards') return ok([3001]);
         if (body.action === 'guiPreviewNote') return ok(true);
         throw new Error(`unexpected action: ${body.action}`);
       }),
@@ -73,12 +72,10 @@ describe('AnkiConnectGateway', () => {
 
     const names = calls.map((c) => c.action);
     expect(names).toEqual([
-      'guiBrowse',
-      'guiSelectCard',
       'apiReflect',
+      'findCards',
       'guiPreviewNote',
-      'guiBrowse',
-      'guiSelectCard',
+      'findCards',
       'guiPreviewNote',
     ]);
   });
@@ -166,7 +163,7 @@ describe('AnkiConnectGateway', () => {
     const gateway = new AnkiConnectGateway('http://127.0.0.1:8765');
     await gateway.openBrowserForNote(888);
 
-    expect(calls.map((c) => c.action)).toEqual(['guiBrowse', 'guiSelectCard', 'apiReflect', 'guiEditNote']);
+    expect(calls.map((c) => c.action)).toEqual(['apiReflect', 'guiBrowse', 'guiSelectCard', 'guiEditNote']);
   });
 
   it('reads note type schema from model actions', async () => {

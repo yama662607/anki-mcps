@@ -181,6 +181,23 @@ async function runFinalize() {
       },
       tags: ['e2e', 'reviewed'],
     });
+
+    const immediate = await callTool('get_notes', {
+      profileId: state.profileId,
+      noteIds: [state.note.noteId],
+    });
+    const searched = await callTool('search_notes', {
+      profileId: state.profileId,
+      deckNames: [state.note.deckName],
+      tags: ['reviewed'],
+      limit: 10,
+    });
+
+    result = {
+      update: result,
+      immediate,
+      searched,
+    };
   } else if (finalize === 'unsuspend') {
     result = await callTool('set_note_cards_suspended', {
       profileId: state.profileId,

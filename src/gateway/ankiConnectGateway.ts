@@ -143,6 +143,16 @@ export class AnkiConnectGateway implements AnkiGateway {
 
   async openBrowserForNote(noteId: number): Promise<PreviewResult> {
     const query = `nid:${noteId}`;
+    if (await this.supportsGuiPreviewNote()) {
+      const selectedCardIds = await this.call<number[]>('findCards', { query });
+      await this.call<unknown>('guiPreviewNote', { note: noteId });
+      return {
+        opened: true,
+        browserQuery: query,
+        selectedCardIds,
+      };
+    }
+
     const result = await this.call<unknown>('guiBrowse', { query });
     const selectedCardIds = Array.isArray(result) ? (result as number[]) : [];
 
@@ -150,11 +160,11 @@ export class AnkiConnectGateway implements AnkiGateway {
       await this.call<boolean>('guiSelectCard', { card: selectedCardIds[0] });
     }
 
-    // Prefer extension API when available; fallback keeps compatibility.
-    if (await this.supportsGuiPreviewNote()) {
-      await this.call<unknown>('guiPreviewNote', { note: noteId });
-    } else {
+    // Fallback keeps compatibility when the extension preview path is unavailable.
+    if (!(await this.supportsGuiPreviewNote())) {
       await this.call<unknown>('guiEditNote', { note: noteId });
+    } else {
+      await this.call<unknown>('guiPreviewNote', { note: noteId });
     }
 
     return {

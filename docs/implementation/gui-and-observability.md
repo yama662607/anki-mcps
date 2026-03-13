@@ -4,10 +4,10 @@
 
 - Setup check tool: `get_runtime_status`
 - Preview tool: `open_note_preview`
-- Primary path: `guiPreviewNote` from the optional `anki-connect-extension`
+- Primary path: `guiPreviewNote` from the optional `anki-connect-extension`, implemented as a read-only native previewer
 - Fallback path: `guiBrowse -> guiSelectCard -> guiEditNote`
 
-The MCP server does not render HTML itself. Preview is delegated to the running Anki app so rendering stays faithful to the real note type and collection state.
+The MCP server does not render HTML itself. Preview is delegated to the running Anki app so rendering stays faithful to the real note type and collection state. When the extension path is available, preview is read-only and does not depend on AnkiConnect's live editor dialog lifecycle.
 
 ## Human review loop
 

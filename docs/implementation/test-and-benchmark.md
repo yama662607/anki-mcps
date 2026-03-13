@@ -24,7 +24,7 @@ MCP-level assertions cover:
 - public tool visibility and read/write annotations
 - removal of public `pack`, `card type definition`, and `draft` tools
 - contract resource contents
-- end-to-end `ensure_deck -> upsert_note_type -> add_note -> open_note_preview -> update/delete or unsuspend`
+- end-to-end `ensure_deck -> upsert_note_type -> add_note -> open_note_preview -> update/get/search/delete or unsuspend`, with extension-backed preview verified against later updates
 - batch add/delete semantics
 
 ## Live smoke

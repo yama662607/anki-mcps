@@ -13,7 +13,7 @@ This project includes a semi-automated smoke script for a live Anki profile.
 
 - Anki is running
 - AnkiConnect is enabled
-- optional: `anki-connect-extension` is installed if you want direct preview instead of edit-dialog fallback
+- optional: `anki-connect-extension` is installed if you want the read-only native preview path instead of edit-dialog fallback
 
 ## Start a single-note smoke run
 

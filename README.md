@@ -31,7 +31,7 @@ It is designed for agents that need to inspect existing Anki structure, create o
 
 - Node.js 22+
 - Anki with AnkiConnect enabled
-- optional: the `anki-connect-extension` add-on for direct preview instead of edit-dialog fallback
+- optional: the `anki-connect-extension` add-on for read-only native preview instead of edit-dialog fallback
 
 ## Quick start
 
@@ -46,7 +46,7 @@ For a first-time setup guide, see [5-minute quick start](docs/quickstart.md).
 ## Dependency model
 
 - `AnkiConnect` is required for real Anki usage
-- `anki-connect-extension` is optional and only improves preview behavior
+- `anki-connect-extension` is optional and provides a read-only native preview path
 - without the extension, `open_note_preview` falls back to opening the edit dialog
 - in `ANKI_GATEWAY_MODE=memory`, neither dependency is required because the server is running in test mode
 
@@ -139,7 +139,7 @@ Some MCP clients use `mcpServers` JSON instead.
 3. Create missing decks with `ensure_deck`.
 4. Create or revise note types with `upsert_note_type(dryRun=true)` and inspect `result.validation`.
 5. Add review-pending content with `add_note` or `add_notes_batch`.
-6. Inspect the real Anki rendering with `open_note_preview`.
+6. Inspect the real Anki rendering with `open_note_preview` (the extension path uses a read-only native previewer, not a live editor dialog).
 7. After user feedback, call `update_note`, `delete_note`, or `set_note_cards_suspended(suspended=false)`.
 
 ## Media workflow
