@@ -344,7 +344,7 @@ export const TOOL_CONTRACTS_V1 = {
             required: ['status', 'operations', 'noteType', 'validation'],
             additionalProperties: false,
             properties: {
-              status: { enum: ['planned', 'created', 'updated'] },
+              status: { enum: ['planned', 'invalid', 'created', 'updated'] },
               operations: { type: 'array', items: { type: 'object' } },
               noteType: { $ref: '#/sharedTypes/NoteTypeSchema' },
               validation: { $ref: '#/sharedTypes/NoteTypeValidation' },

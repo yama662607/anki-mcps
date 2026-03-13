@@ -109,7 +109,9 @@ describe('NoteTypeService', () => {
     });
 
     const errorCodes = result.result.validation.errors.map((issue) => issue.code);
+    expect(result.result.status).toBe('invalid');
     expect(result.result.validation.canApply).toBe(false);
+    expect(result.result.operations).toEqual([{ kind: 'create_model', modelName: 'ts.v1.invalid' }]);
     expect(errorCodes).toContain('UNKNOWN_FIELD_REF');
     expect(errorCodes).toContain('UNBALANCED_SECTION_TAG');
     expect(errorCodes).toContain('INVALID_CSS_SYNTAX');

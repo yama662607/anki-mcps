@@ -42,6 +42,7 @@ Every write tool requires explicit `profileId`.
 ## Validation model
 
 - note field names are validated against the live note type schema
+- note type dry-runs return `result.status="invalid"` when `validation.canApply=false`
 - unknown note types return `NOT_FOUND`
 - unknown fields return `INVALID_ARGUMENT`
 - stale `expectedModTimestamp` returns `CONFLICT`

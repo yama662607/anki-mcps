@@ -416,7 +416,9 @@ describe('MCP server', () => {
       }));
 
       expect(result.dryRun).toBe(true);
+      expect(result.result.status).toBe('invalid');
       expect(result.result.validation.canApply).toBe(false);
+      expect(result.result.operations).toEqual([{ kind: 'create_model', modelName: 'ts.v1.lint' }]);
       expect(result.result.validation.errors.map((issue: { code: string }) => issue.code)).toContain('UNKNOWN_FIELD_REF');
       expect(result.result.validation.errors.map((issue: { code: string }) => issue.code)).toContain('INVALID_CSS_SYNTAX');
     } finally {

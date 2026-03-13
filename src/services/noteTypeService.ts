@@ -69,7 +69,7 @@ export class NoteTypeService {
     profileId: string;
     dryRun: boolean;
     result: {
-      status: 'planned' | 'created' | 'updated';
+      status: 'planned' | 'invalid' | 'created' | 'updated';
       operations: NoteTypeUpsertOperation[];
       noteType: NoteTypeSchema;
       validation: NoteTypeValidation;
@@ -115,7 +115,7 @@ export class NoteTypeService {
         profileId,
         dryRun,
         result: {
-          status: 'planned',
+          status: validation.canApply ? 'planned' : 'invalid',
           operations,
           noteType: targetSchema,
           validation,

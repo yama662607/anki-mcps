@@ -21,6 +21,14 @@ No secondary registration step is required after `upsert_note_type`.
 - `validation.canApply`
 - `validation.errors[]`
 - `validation.warnings[]`
+- `operations`
+
+Dry-runs return:
+
+- `status="planned"` when `validation.canApply=true`
+- `status="invalid"` when `validation.canApply=false`
+
+Even on `status="invalid"`, `operations` still describes the intended apply plan. The authoritative apply gate is `validation.canApply`.
 
 Typical fatal `errors`:
 
