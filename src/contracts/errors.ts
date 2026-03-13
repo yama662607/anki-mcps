@@ -1,11 +1,11 @@
 export const ERROR_CODES = [
-  'INVALID_ARGUMENT',
-  'NOT_FOUND',
-  'CONFLICT',
-  'DEPENDENCY_UNAVAILABLE',
-  'PROFILE_REQUIRED',
-  'PROFILE_SCOPE_MISMATCH',
-  'FORBIDDEN_OPERATION',
+  "INVALID_ARGUMENT",
+  "NOT_FOUND",
+  "CONFLICT",
+  "DEPENDENCY_UNAVAILABLE",
+  "PROFILE_REQUIRED",
+  "PROFILE_SCOPE_MISMATCH",
+  "FORBIDDEN_OPERATION",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -33,9 +33,13 @@ export class AppError extends Error {
   readonly hint?: string;
   readonly context?: Record<string, unknown>;
 
-  constructor(code: ErrorCode, message: string, options?: { hint?: string; context?: Record<string, unknown> }) {
+  constructor(
+    code: ErrorCode,
+    message: string,
+    options?: { hint?: string; context?: Record<string, unknown> }
+  ) {
     super(message);
-    this.name = 'AppError';
+    this.name = "AppError";
     this.code = code;
     this.hint = options?.hint;
     this.context = options?.context;
@@ -57,7 +61,7 @@ export function asAppError(error: unknown): AppError {
     return error;
   }
   if (error instanceof Error) {
-    return new AppError('DEPENDENCY_UNAVAILABLE', error.message);
+    return new AppError("DEPENDENCY_UNAVAILABLE", error.message);
   }
-  return new AppError('DEPENDENCY_UNAVAILABLE', 'Unknown error', { context: { error } });
+  return new AppError("DEPENDENCY_UNAVAILABLE", "Unknown error", { context: { error } });
 }

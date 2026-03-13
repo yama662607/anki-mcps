@@ -1,6 +1,6 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-export const contractVersion = '1.0.0' as const;
+export const contractVersion = "1.0.0" as const;
 
 export const profileIdSchema = z.string().min(1).max(120);
 export const modelNameSchema = z.string().min(1).max(180);
@@ -15,7 +15,9 @@ export const clientRequestIdSchema = z.string().min(1).max(120);
 export const fieldsInputSchema = z.record(fieldNameSchema, z.string());
 export const tagsInputSchema = z.array(z.string().min(1).max(180)).max(128);
 
-export const listNoteTypesInputSchema = z.object({ profileId: profileIdSchema.optional() }).strict();
+export const listNoteTypesInputSchema = z
+  .object({ profileId: profileIdSchema.optional() })
+  .strict();
 
 export const getNoteTypeSchemaInputSchema = z
   .object({
@@ -115,7 +117,7 @@ export const addNotesBatchInputSchema = z
             tags: tagsInputSchema.optional(),
             suspendNewCards: z.boolean().optional(),
           })
-          .strict(),
+          .strict()
       )
       .min(1)
       .max(100),
@@ -135,8 +137,8 @@ export const updateNoteInputSchema = z
     if (!value.fields && !value.tags) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Either fields or tags must be provided',
-        path: ['fields'],
+        message: "Either fields or tags must be provided",
+        path: ["fields"],
       });
     }
   });
@@ -158,7 +160,7 @@ export const deleteNotesBatchInputSchema = z
             itemId: itemIdSchema,
             noteId: noteIdSchema,
           })
-          .strict(),
+          .strict()
       )
       .min(1)
       .max(100),
@@ -184,7 +186,7 @@ export const importMediaAssetInputSchema = z
   .object({
     profileId: profileIdSchema,
     localPath: z.string().min(1),
-    mediaKind: z.enum(['audio', 'image']).optional(),
+    mediaKind: z.enum(["audio", "image"]).optional(),
     preferredFilename: z.string().min(1).max(180).optional(),
   })
   .strict();

@@ -1,4 +1,4 @@
-import { AppError } from '../contracts/errors.js';
+import { AppError } from "../contracts/errors.js";
 import type {
   AnkiGateway,
   CreateNoteInput,
@@ -11,7 +11,7 @@ import type {
   StoreMediaFileInput,
   StoreMediaFileResult,
   UpsertNoteTypeInput,
-} from './ankiGateway.js';
+} from "./ankiGateway.js";
 
 type InternalNote = {
   noteId: number;
@@ -42,25 +42,29 @@ export class MemoryGateway implements AnkiGateway {
   private logicalTime = Date.now();
   private readonly notes = new Map<number, InternalNote>();
   private readonly media = new Map<string, string>();
-  private readonly decks = new Set<string>(['Default']);
+  private readonly decks = new Set<string>(["Default"]);
   private readonly models = new Map<string, InternalModel>([
     [
-      'Basic',
+      "Basic",
       {
-        modelName: 'Basic',
-        fieldNames: ['Front', 'Back'],
-        templates: [{ name: 'Card 1', front: '{{Front}}', back: '{{FrontSide}}<hr id=answer>{{Back}}' }],
-        css: '.card { font-family: arial; }',
+        modelName: "Basic",
+        fieldNames: ["Front", "Back"],
+        templates: [
+          { name: "Card 1", front: "{{Front}}", back: "{{FrontSide}}<hr id=answer>{{Back}}" },
+        ],
+        css: ".card { font-family: arial; }",
         isCloze: false,
       },
     ],
     [
-      'Cloze',
+      "Cloze",
       {
-        modelName: 'Cloze',
-        fieldNames: ['Text', 'Extra'],
-        templates: [{ name: 'Cloze', front: '{{cloze:Text}}', back: '{{cloze:Text}}<br>{{Extra}}' }],
-        css: '.card { font-family: arial; }',
+        modelName: "Cloze",
+        fieldNames: ["Text", "Extra"],
+        templates: [
+          { name: "Cloze", front: "{{cloze:Text}}", back: "{{cloze:Text}}<br>{{Extra}}" },
+        ],
+        css: ".card { font-family: arial; }",
         isCloze: true,
       },
     ],
@@ -68,10 +72,10 @@ export class MemoryGateway implements AnkiGateway {
 
   async getRuntimeCapabilities(): Promise<RuntimeCapabilities> {
     return {
-      gatewayMode: 'memory',
+      gatewayMode: "memory",
       ankiConnectReachable: false,
       extensionInstalled: false,
-      previewMode: 'memory',
+      previewMode: "memory",
     };
   }
 
@@ -84,8 +88,13 @@ export class MemoryGateway implements AnkiGateway {
   }
 
   async findNotes(query: string): Promise<number[]> {
-    const predicates = query.split(/\s+/).map((part) => part.trim()).filter(Boolean);
-    const notes = [...this.notes.values()].filter((note) => predicates.every((predicate) => this.matchesPredicate(note, predicate)));
+    const predicates = query
+      .split(/\s+/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+    const notes = [...this.notes.values()].filter((note) =>
+      predicates.every((predicate) => this.matchesPredicate(note, predicate))
+    );
     return notes.map((note) => note.noteId).sort((left, right) => left - right);
   }
 
@@ -198,8 +207,12 @@ export class MemoryGateway implements AnkiGateway {
   }
 
   async listMediaFiles(pattern: string): Promise<string[]> {
-    const regex = new RegExp(`^${pattern.replace(/[.+^${}()|[\\]\\\\]/g, '\\\\$&').replace(/\\*/g, '.*')}$`);
-    return [...this.media.keys()].filter((filename) => regex.test(filename)).sort((left, right) => left.localeCompare(right));
+    const regex = new RegExp(
+      `^${pattern.replace(/[.+^${}()|[\\]\\\\]/g, "\\\\$&").replace(/\\*/g, ".*")}$`
+    );
+    return [...this.media.keys()]
+      .filter((filename) => regex.test(filename))
+      .sort((left, right) => left.localeCompare(right));
   }
 
   async storeMediaFile(input: StoreMediaFileInput): Promise<StoreMediaFileResult> {
@@ -220,7 +233,7 @@ export class MemoryGateway implements AnkiGateway {
   private requireNote(noteId: number): InternalNote {
     const note = this.notes.get(noteId);
     if (!note) {
-      throw new AppError('NOT_FOUND', `Note not found: ${noteId}`);
+      throw new AppError("NOT_FOUND", `Note not found: ${noteId}`);
     }
     return note;
   }
@@ -228,7 +241,7 @@ export class MemoryGateway implements AnkiGateway {
   private requireModel(modelName: string): InternalModel {
     const model = this.models.get(modelName);
     if (!model) {
-      throw new AppError('NOT_FOUND', `Model not found: ${modelName}`);
+      throw new AppError("NOT_FOUND", `Model not found: ${modelName}`);
     }
     return model;
   }
@@ -241,7 +254,7 @@ export class MemoryGateway implements AnkiGateway {
           front: this.extractFieldRefs(template.front),
           back: this.extractFieldRefs(template.back),
         },
-      ]),
+      ])
     );
 
     return {
@@ -257,29 +270,29 @@ export class MemoryGateway implements AnkiGateway {
   private extractFieldRefs(template: string): string[] {
     const matches = [...template.matchAll(/\{\{([^}]+)\}\}/g)];
     const refs = matches
-      .map((match) => match[1]?.replace(/^cloze:/, '').trim() ?? '')
-      .filter((name) => name.length > 0 && name !== 'FrontSide');
+      .map((match) => match[1]?.replace(/^cloze:/, "").trim() ?? "")
+      .filter((name) => name.length > 0 && name !== "FrontSide");
     return [...new Set(refs)];
   }
 
   private matchesPredicate(note: InternalNote, predicate: string): boolean {
-    if (predicate === 'deck:*' || predicate === '*') {
+    if (predicate === "deck:*" || predicate === "*") {
       return true;
     }
-    if (predicate.startsWith('deck:')) {
+    if (predicate.startsWith("deck:")) {
       return note.deckName === this.stripQuotes(predicate.slice(5));
     }
-    if (predicate.startsWith('note:')) {
+    if (predicate.startsWith("note:")) {
       return note.modelName === this.stripQuotes(predicate.slice(5));
     }
-    if (predicate.startsWith('tag:')) {
+    if (predicate.startsWith("tag:")) {
       return note.tags.includes(this.stripQuotes(predicate.slice(4)));
     }
     return true;
   }
 
   private stripQuotes(value: string): string {
-    return value.replace(/^"+|"+$/g, '');
+    return value.replace(/^"+|"+$/g, "");
   }
 
   private nextTimestamp(previous = 0): number {

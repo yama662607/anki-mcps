@@ -1,6 +1,6 @@
-import { DatabaseSync } from 'node:sqlite';
-import { mkdirSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 
 type NoteRequestRow = {
   profile_id: string;
@@ -23,19 +23,24 @@ export class AuthoringStore {
     this.db.close();
   }
 
-  getNoteRequest(profileId: string, clientRequestId: string): {
-    clientRequestId: string;
-    requestFingerprint: string;
-    noteId: number;
-    createdAt: string;
-  } | undefined {
+  getNoteRequest(
+    profileId: string,
+    clientRequestId: string
+  ):
+    | {
+        clientRequestId: string;
+        requestFingerprint: string;
+        noteId: number;
+        createdAt: string;
+      }
+    | undefined {
     const row = this.db
       .prepare(
         `
         SELECT *
         FROM note_request_log
         WHERE profile_id = ? AND client_request_id = ?
-      `,
+      `
       )
       .get(profileId, clientRequestId) as NoteRequestRow | undefined;
 
@@ -64,14 +69,14 @@ export class AuthoringStore {
         INSERT INTO note_request_log (
           profile_id, client_request_id, request_fingerprint, note_id, created_at
         ) VALUES (?, ?, ?, ?, ?)
-      `,
+      `
       )
       .run(
         input.profileId,
         input.clientRequestId,
         input.requestFingerprint,
         input.noteId,
-        input.createdAt,
+        input.createdAt
       );
   }
 

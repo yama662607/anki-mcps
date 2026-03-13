@@ -37,11 +37,11 @@ export type StoreMediaFileResult = {
 };
 
 export type RuntimeCapabilities = {
-  gatewayMode: 'anki-connect' | 'memory';
+  gatewayMode: "anki-connect" | "memory";
   endpoint?: string;
   ankiConnectReachable: boolean;
   extensionInstalled: boolean;
-  previewMode: 'extension-preview' | 'edit-dialog-fallback' | 'memory' | 'unavailable';
+  previewMode: "extension-preview" | "edit-dialog-fallback" | "memory" | "unavailable";
 };
 
 export type NoteTypeSummaryResult = {

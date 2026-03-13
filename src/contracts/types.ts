@@ -34,31 +34,31 @@ export type NoteTypeSchema = {
 };
 
 export type NoteTypeUpsertOperation =
-  | { kind: 'create_model'; modelName: string }
-  | { kind: 'add_field'; modelName: string; fieldName: string }
-  | { kind: 'add_template'; modelName: string; templateName: string }
-  | { kind: 'update_templates'; modelName: string; templateNames: string[] }
-  | { kind: 'update_css'; modelName: string };
+  | { kind: "create_model"; modelName: string }
+  | { kind: "add_field"; modelName: string; fieldName: string }
+  | { kind: "add_template"; modelName: string; templateName: string }
+  | { kind: "update_templates"; modelName: string; templateNames: string[] }
+  | { kind: "update_css"; modelName: string };
 
 export type NoteTypeLintIssue = {
   code:
-    | 'UNKNOWN_FIELD_REF'
-    | 'UNBALANCED_SECTION_TAG'
-    | 'INVALID_SECTION_NESTING'
-    | 'INVALID_CLOZE_USAGE'
-    | 'INVALID_CSS_SYNTAX'
-    | 'DUPLICATE_FIELD_NAME'
-    | 'DUPLICATE_TEMPLATE_NAME'
-    | 'UNUSED_FIELD'
-    | 'LARGE_TEMPLATE'
-    | 'LARGE_CSS'
-    | 'DEEP_SECTION_NESTING'
-    | 'SUSPICIOUS_HTML_STRUCTURE'
-    | 'MISSING_FRONTSIDE_ON_BACK';
+    | "UNKNOWN_FIELD_REF"
+    | "UNBALANCED_SECTION_TAG"
+    | "INVALID_SECTION_NESTING"
+    | "INVALID_CLOZE_USAGE"
+    | "INVALID_CSS_SYNTAX"
+    | "DUPLICATE_FIELD_NAME"
+    | "DUPLICATE_TEMPLATE_NAME"
+    | "UNUSED_FIELD"
+    | "LARGE_TEMPLATE"
+    | "LARGE_CSS"
+    | "DEEP_SECTION_NESTING"
+    | "SUSPICIOUS_HTML_STRUCTURE"
+    | "MISSING_FRONTSIDE_ON_BACK";
   message: string;
   location?: {
     templateName?: string;
-    side: 'front' | 'back' | 'css' | 'note_type';
+    side: "front" | "back" | "css" | "note_type";
     fieldName?: string;
   };
 };
@@ -91,7 +91,7 @@ export type BatchResultSummary = {
   failed: number;
 };
 
-export type MediaKind = 'audio' | 'image';
+export type MediaKind = "audio" | "image";
 
 export type ImportedMediaAsset = {
   mediaKind: MediaKind;
@@ -103,10 +103,10 @@ export type ImportedMediaAsset = {
 
 export type RuntimeStatus = {
   ready: boolean;
-  gatewayMode: 'anki-connect' | 'memory';
+  gatewayMode: "anki-connect" | "memory";
   endpoint?: string;
   ankiConnectReachable: boolean;
   extensionInstalled: boolean;
-  previewMode: 'extension-preview' | 'edit-dialog-fallback' | 'memory' | 'unavailable';
+  previewMode: "extension-preview" | "edit-dialog-fallback" | "memory" | "unavailable";
   guidance: string[];
 };

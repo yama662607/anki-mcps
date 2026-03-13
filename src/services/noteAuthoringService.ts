@@ -1,10 +1,15 @@
-import { AppError, asAppError } from '../contracts/errors.js';
-import type { BatchResultSummary, DeckSummary, NoteRecord, NoteSummary } from '../contracts/types.js';
-import type { AnkiGateway, NoteSnapshot } from '../gateway/ankiGateway.js';
-import { AuthoringStore } from '../persistence/authoringStore.js';
-import { normalizeTags, sortRecord, toCanonicalJson } from '../utils/canonical.js';
-import { sha256 } from '../utils/hash.js';
-import { resolveProfileId } from '../utils/profile.js';
+import { AppError, asAppError } from "../contracts/errors.js";
+import type {
+  BatchResultSummary,
+  DeckSummary,
+  NoteRecord,
+  NoteSummary,
+} from "../contracts/types.js";
+import type { AnkiGateway, NoteSnapshot } from "../gateway/ankiGateway.js";
+import type { AuthoringStore } from "../persistence/authoringStore.js";
+import { normalizeTags, sortRecord, toCanonicalJson } from "../utils/canonical.js";
+import { sha256 } from "../utils/hash.js";
+import { resolveProfileId } from "../utils/profile.js";
 
 type NoteAuthoringServiceConfig = {
   activeProfileId?: string;
@@ -16,18 +21,18 @@ export class NoteAuthoringService {
   constructor(
     private readonly store: AuthoringStore,
     private readonly ankiGateway: AnkiGateway,
-    private readonly config: NoteAuthoringServiceConfig,
+    private readonly config: NoteAuthoringServiceConfig
   ) {}
 
   async listDecks(input: { profileId?: string }): Promise<{
-    contractVersion: '1.0.0';
+    contractVersion: "1.0.0";
     profileId: string;
     decks: DeckSummary[];
   }> {
     const profileId = this.resolveReadProfile(input.profileId);
     const decks = await this.ankiGateway.listDecks();
     return {
-      contractVersion: '1.0.0',
+      contractVersion: "1.0.0",
       profileId,
       decks: decks.map((deckName) => ({ deckName })),
     };
@@ -41,7 +46,7 @@ export class NoteAuthoringService {
     tags?: string[];
     limit?: number;
   }): Promise<{
-    contractVersion: '1.0.0';
+    contractVersion: "1.0.0";
     profileId: string;
     query: string;
     notes: NoteSummary[];
@@ -50,25 +55,26 @@ export class NoteAuthoringService {
     const query = this.buildSearchQuery(input);
     const noteIds = await this.ankiGateway.findNotes(query);
     const limitedIds = [...noteIds].sort((left, right) => left - right).slice(0, input.limit ?? 50);
-    const notes = await Promise.all(limitedIds.map(async (noteId) => this.toNoteSummary(await this.ankiGateway.getNoteSnapshot(noteId))));
+    const notes = await Promise.all(
+      limitedIds.map(async (noteId) =>
+        this.toNoteSummary(await this.ankiGateway.getNoteSnapshot(noteId))
+      )
+    );
 
     return {
-      contractVersion: '1.0.0',
+      contractVersion: "1.0.0",
       profileId,
       query,
       notes,
     };
   }
 
-  async getNotes(input: {
-    profileId?: string;
-    noteIds: number[];
-  }): Promise<{
-    contractVersion: '1.0.0';
+  async getNotes(input: { profileId?: string; noteIds: number[] }): Promise<{
+    contractVersion: "1.0.0";
     profileId: string;
     results: Array<
       | { noteId: number; ok: true; note: NoteRecord }
-      | { noteId: number; ok: false; error: ReturnType<AppError['toPayload']> }
+      | { noteId: number; ok: false; error: ReturnType<AppError["toPayload"]> }
     >;
   }> {
     const profileId = this.resolveReadProfile(input.profileId);
@@ -88,21 +94,18 @@ export class NoteAuthoringService {
             error: asAppError(error).toPayload(),
           };
         }
-      }),
+      })
     );
 
     return {
-      contractVersion: '1.0.0',
+      contractVersion: "1.0.0",
       profileId,
       results,
     };
   }
 
-  async ensureDeck(input: {
-    profileId: string;
-    deckName: string;
-  }): Promise<{
-    contractVersion: '1.0.0';
+  async ensureDeck(input: { profileId: string; deckName: string }): Promise<{
+    contractVersion: "1.0.0";
     profileId: string;
     deckName: string;
     created: boolean;
@@ -115,7 +118,7 @@ export class NoteAuthoringService {
     }
 
     return {
-      contractVersion: '1.0.0',
+      contractVersion: "1.0.0",
       profileId,
       deckName: input.deckName,
       created,
@@ -131,7 +134,7 @@ export class NoteAuthoringService {
     tags?: string[];
     suspendNewCards?: boolean;
   }): Promise<{
-    contractVersion: '1.0.0';
+    contractVersion: "1.0.0";
     profileId: string;
     reviewPending: boolean;
     note: NoteRecord;
@@ -145,14 +148,14 @@ export class NoteAuthoringService {
       const existing = this.store.getNoteRequest(profileId, input.clientRequestId);
       if (existing) {
         if (existing.requestFingerprint !== requestFingerprint) {
-          throw new AppError('CONFLICT', 'clientRequestId was reused with a different payload', {
-            hint: 'Use a new clientRequestId when changing add_note content.',
+          throw new AppError("CONFLICT", "clientRequestId was reused with a different payload", {
+            hint: "Use a new clientRequestId when changing add_note content.",
           });
         }
 
         const snapshot = await this.ankiGateway.getNoteSnapshot(existing.noteId);
         return {
-          contractVersion: '1.0.0',
+          contractVersion: "1.0.0",
           profileId,
           reviewPending,
           note: this.toNoteRecord(snapshot),
@@ -162,7 +165,11 @@ export class NoteAuthoringService {
     }
 
     await this.assertDeckExists(input.deckName);
-    const normalized = await this.normalizeForModel(input.modelName, input.fields, input.tags ?? []);
+    const normalized = await this.normalizeForModel(
+      input.modelName,
+      input.fields,
+      input.tags ?? []
+    );
     const created = await this.ankiGateway.createNote({
       deckName: input.deckName,
       modelName: input.modelName,
@@ -186,7 +193,7 @@ export class NoteAuthoringService {
       });
     }
 
-    this.logLifecycleEvent('note_created', {
+    this.logLifecycleEvent("note_created", {
       profileId,
       noteId: snapshot.noteId,
       cardIds: snapshot.cardIds,
@@ -196,7 +203,7 @@ export class NoteAuthoringService {
     });
 
     return {
-      contractVersion: '1.0.0',
+      contractVersion: "1.0.0",
       profileId,
       reviewPending,
       note: this.toNoteRecord(snapshot),
@@ -215,12 +222,12 @@ export class NoteAuthoringService {
       suspendNewCards?: boolean;
     }>;
   }): Promise<{
-    contractVersion: '1.0.0';
+    contractVersion: "1.0.0";
     profileId: string;
     summary: BatchResultSummary;
     results: Array<
       | { itemId: string; ok: true; reviewPending: boolean; note: NoteRecord }
-      | { itemId: string; ok: false; error: ReturnType<AppError['toPayload']> }
+      | { itemId: string; ok: false; error: ReturnType<AppError["toPayload"]> }
     >;
   }> {
     const profileId = this.resolveWriteProfile(input.profileId);
@@ -253,7 +260,7 @@ export class NoteAuthoringService {
     }
 
     return {
-      contractVersion: '1.0.0',
+      contractVersion: "1.0.0",
       profileId,
       summary: this.summarizeBatch(results),
       results,
@@ -267,15 +274,15 @@ export class NoteAuthoringService {
     fields?: Record<string, string>;
     tags?: string[];
   }): Promise<{
-    contractVersion: '1.0.0';
+    contractVersion: "1.0.0";
     profileId: string;
     note: NoteRecord;
   }> {
     const profileId = this.resolveWriteProfile(input.profileId);
     const snapshot = await this.ankiGateway.getNoteSnapshot(input.noteId);
     if (snapshot.modTimestamp !== input.expectedModTimestamp) {
-      throw new AppError('CONFLICT', 'Live note changed since it was last read', {
-        hint: 'Read the note again and retry with the current mod timestamp.',
+      throw new AppError("CONFLICT", "Live note changed since it was last read", {
+        hint: "Read the note again and retry with the current mod timestamp.",
         context: {
           noteId: input.noteId,
           expectedModTimestamp: input.expectedModTimestamp,
@@ -287,7 +294,7 @@ export class NoteAuthoringService {
     const normalized = await this.normalizeForModel(
       snapshot.modelName,
       input.fields ? { ...snapshot.fields, ...input.fields } : snapshot.fields,
-      input.tags ?? snapshot.tags,
+      input.tags ?? snapshot.tags
     );
 
     if (input.fields) {
@@ -301,7 +308,7 @@ export class NoteAuthoringService {
     const updated = input.tags
       ? await this.readStableTaggedNote(input.noteId, normalized.tags)
       : await this.ankiGateway.getNoteSnapshot(input.noteId);
-    this.logLifecycleEvent('note_updated', {
+    this.logLifecycleEvent("note_updated", {
       profileId,
       noteId: updated.noteId,
       cardIds: updated.cardIds,
@@ -310,20 +317,17 @@ export class NoteAuthoringService {
     });
 
     return {
-      contractVersion: '1.0.0',
+      contractVersion: "1.0.0",
       profileId,
       note: this.toNoteRecord(updated),
     };
   }
 
-  async deleteNote(input: {
+  async deleteNote(input: { profileId: string; noteId: number }): Promise<{
+    contractVersion: "1.0.0";
     profileId: string;
     noteId: number;
-  }): Promise<{
-    contractVersion: '1.0.0';
-    profileId: string;
-    noteId: number;
-    status: 'deleted' | 'already_deleted';
+    status: "deleted" | "already_deleted";
   }> {
     const profileId = this.resolveWriteProfile(input.profileId);
 
@@ -331,26 +335,26 @@ export class NoteAuthoringService {
       await this.ankiGateway.getNoteSnapshot(input.noteId);
       await this.ankiGateway.closeNoteDialog(input.noteId);
       await this.ankiGateway.deleteNote(input.noteId);
-      this.logLifecycleEvent('note_deleted', {
+      this.logLifecycleEvent("note_deleted", {
         profileId,
         noteId: input.noteId,
       });
       return {
-        contractVersion: '1.0.0',
+        contractVersion: "1.0.0",
         profileId,
         noteId: input.noteId,
-        status: 'deleted',
+        status: "deleted",
       };
     } catch (error) {
       const appError = asAppError(error);
-      if (appError.code !== 'NOT_FOUND') {
+      if (appError.code !== "NOT_FOUND") {
         throw appError;
       }
       return {
-        contractVersion: '1.0.0',
+        contractVersion: "1.0.0",
         profileId,
         noteId: input.noteId,
-        status: 'already_deleted',
+        status: "already_deleted",
       };
     }
   }
@@ -359,12 +363,12 @@ export class NoteAuthoringService {
     profileId: string;
     items: Array<{ itemId: string; noteId: number }>;
   }): Promise<{
-    contractVersion: '1.0.0';
+    contractVersion: "1.0.0";
     profileId: string;
     summary: BatchResultSummary;
     results: Array<
-      | { itemId: string; ok: true; noteId: number; status: 'deleted' | 'already_deleted' }
-      | { itemId: string; ok: false; error: ReturnType<AppError['toPayload']> }
+      | { itemId: string; ok: true; noteId: number; status: "deleted" | "already_deleted" }
+      | { itemId: string; ok: false; error: ReturnType<AppError["toPayload"]> }
     >;
   }> {
     const profileId = this.resolveWriteProfile(input.profileId);
@@ -389,18 +393,15 @@ export class NoteAuthoringService {
     }
 
     return {
-      contractVersion: '1.0.0',
+      contractVersion: "1.0.0",
       profileId,
       summary: this.summarizeBatch(results),
       results,
     };
   }
 
-  async openNotePreview(input: {
-    profileId?: string;
-    noteId: number;
-  }): Promise<{
-    contractVersion: '1.0.0';
+  async openNotePreview(input: { profileId?: string; noteId: number }): Promise<{
+    contractVersion: "1.0.0";
     profileId: string;
     noteId: number;
     preview: {
@@ -414,7 +415,7 @@ export class NoteAuthoringService {
     const preview = await this.ankiGateway.openBrowserForNote(input.noteId);
 
     return {
-      contractVersion: '1.0.0',
+      contractVersion: "1.0.0",
       profileId,
       noteId: input.noteId,
       preview,
@@ -426,7 +427,7 @@ export class NoteAuthoringService {
     noteId: number;
     suspended: boolean;
   }): Promise<{
-    contractVersion: '1.0.0';
+    contractVersion: "1.0.0";
     profileId: string;
     noteId: number;
     cardIds: number[];
@@ -436,14 +437,14 @@ export class NoteAuthoringService {
     const snapshot = await this.ankiGateway.getNoteSnapshot(input.noteId);
     await this.ankiGateway.setCardsSuspended(snapshot.cardIds, input.suspended);
 
-    this.logLifecycleEvent(input.suspended ? 'note_suspended' : 'note_unsuspended', {
+    this.logLifecycleEvent(input.suspended ? "note_suspended" : "note_unsuspended", {
       profileId,
       noteId: input.noteId,
       cardIds: snapshot.cardIds,
     });
 
     return {
-      contractVersion: '1.0.0',
+      contractVersion: "1.0.0",
       profileId,
       noteId: input.noteId,
       cardIds: snapshot.cardIds,
@@ -470,8 +471,8 @@ export class NoteAuthoringService {
   private async assertDeckExists(deckName: string): Promise<void> {
     const decks = await this.ankiGateway.listDecks();
     if (!decks.includes(deckName)) {
-      throw new AppError('NOT_FOUND', `Deck not found: ${deckName}`, {
-        hint: 'Call ensure_deck before add_note when targeting a new deck.',
+      throw new AppError("NOT_FOUND", `Deck not found: ${deckName}`, {
+        hint: "Call ensure_deck before add_note when targeting a new deck.",
       });
     }
   }
@@ -479,25 +480,28 @@ export class NoteAuthoringService {
   private async normalizeForModel(
     modelName: string,
     fields: Record<string, string>,
-    tags: string[],
+    tags: string[]
   ): Promise<{ fields: Record<string, string>; tags: string[] }> {
     const schema = await this.ankiGateway.getNoteTypeSchema(modelName);
     const schemaFields = new Set(schema.fieldNames);
 
     for (const fieldName of Object.keys(fields)) {
       if (!schemaFields.has(fieldName)) {
-        throw new AppError('INVALID_ARGUMENT', `Unknown field for ${modelName}: ${fieldName}`);
+        throw new AppError("INVALID_ARGUMENT", `Unknown field for ${modelName}: ${fieldName}`);
       }
     }
 
     const normalizedFields = Object.fromEntries(
-      schema.fieldNames.map((fieldName) => [fieldName, fields[fieldName] ?? '']),
+      schema.fieldNames.map((fieldName) => [fieldName, fields[fieldName] ?? ""])
     );
 
     if (schema.isCloze) {
       const hasCloze = Object.values(normalizedFields).some((value) => /\{\{c\d+::/.test(value));
       if (!hasCloze) {
-        throw new AppError('INVALID_ARGUMENT', `Cloze note type requires at least one cloze deletion: ${modelName}`);
+        throw new AppError(
+          "INVALID_ARGUMENT",
+          `Cloze note type requires at least one cloze deletion: ${modelName}`
+        );
       }
     }
 
@@ -519,20 +523,24 @@ export class NoteAuthoringService {
       parts.push(input.query.trim());
     }
     if (input.modelNames?.length) {
-      parts.push(`(${input.modelNames.map((name) => `note:${this.quoteSearchValue(name)}`).join(' OR ')})`);
+      parts.push(
+        `(${input.modelNames.map((name) => `note:${this.quoteSearchValue(name)}`).join(" OR ")})`
+      );
     }
     if (input.deckNames?.length) {
-      parts.push(`(${input.deckNames.map((name) => `deck:${this.quoteSearchValue(name)}`).join(' OR ')})`);
+      parts.push(
+        `(${input.deckNames.map((name) => `deck:${this.quoteSearchValue(name)}`).join(" OR ")})`
+      );
     }
     if (input.tags?.length) {
-      parts.push(`(${input.tags.map((tag) => `tag:${this.quoteSearchValue(tag)}`).join(' OR ')})`);
+      parts.push(`(${input.tags.map((tag) => `tag:${this.quoteSearchValue(tag)}`).join(" OR ")})`);
     }
 
-    return parts.length > 0 ? parts.join(' ') : 'deck:*';
+    return parts.length > 0 ? parts.join(" ") : "deck:*";
   }
 
   private quoteSearchValue(value: string): string {
-    return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+    return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
   }
 
   private computeCreateFingerprint(input: {
@@ -549,7 +557,7 @@ export class NoteAuthoringService {
         fields: sortRecord(input.fields),
         tags: normalizeTags(input.tags ?? []),
         suspendNewCards: input.suspendNewCards ?? true,
-      }),
+      })
     );
   }
 
@@ -567,7 +575,10 @@ export class NoteAuthoringService {
     return left.every((tag, index) => tag === right[index]);
   }
 
-  private async readStableTaggedNote(noteId: number, expectedTags: string[]): Promise<NoteSnapshot> {
+  private async readStableTaggedNote(
+    noteId: number,
+    expectedTags: string[]
+  ): Promise<NoteSnapshot> {
     const attempts = Math.max(this.config.tagReadbackAttempts ?? 6, 2);
     const delayMs = Math.max(this.config.tagReadbackDelayMs ?? 150, 0);
     let lastSnapshot: NoteSnapshot | undefined;
@@ -592,8 +603,8 @@ export class NoteAuthoringService {
       return lastSnapshot;
     }
 
-    throw new AppError('DEPENDENCY_UNAVAILABLE', 'Updated note tags did not persist in Anki', {
-      hint: 'Read the note again before retrying. The Anki backend accepted the update but returned different tags.',
+    throw new AppError("DEPENDENCY_UNAVAILABLE", "Updated note tags did not persist in Anki", {
+      hint: "Read the note again before retrying. The Anki backend accepted the update but returned different tags.",
       context: {
         noteId,
         requestedTags: expectedTags,
