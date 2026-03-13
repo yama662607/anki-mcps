@@ -6,6 +6,7 @@ TypeScript MCP server for review-first Anki authoring built on official Anki con
 
 - deck and note discovery for example-driven authoring
 - additive-safe note type authoring with `dryRun=true` by default
+- lightweight note type linting with structured `errors` and `warnings` before apply
 - direct note creation with `modelName`, `deckName`, `fields`, and `tags`
 - review-first isolation by suspending new cards until the user keeps them
 - optimistic conflict detection for `update_note`
@@ -35,7 +36,7 @@ npm run dev
 
 1. Discover existing structure with `list_decks`, `list_note_types`, `get_note_type_schema`, `search_notes`, and `get_notes`.
 2. Create missing decks with `ensure_deck`.
-3. Create or revise note types with `upsert_note_type` when needed.
+3. Create or revise note types with `upsert_note_type(dryRun=true)` and inspect `result.validation`.
 4. Add review-pending content with `add_note` or `add_notes_batch`.
 5. Inspect the real Anki rendering with `open_note_preview`.
 6. After user feedback, call `update_note`, `delete_note`, or `set_note_cards_suspended(suspended=false)`.

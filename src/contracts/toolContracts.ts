@@ -120,6 +120,34 @@ export const TOOL_CONTRACTS_V1 = {
         isCloze: { type: 'boolean' },
       },
     },
+    NoteTypeValidationIssue: {
+      type: 'object',
+      required: ['code', 'message'],
+      additionalProperties: false,
+      properties: {
+        code: { type: 'string' },
+        message: { type: 'string' },
+        location: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            templateName: { type: 'string' },
+            side: { enum: ['front', 'back', 'css', 'note_type'] },
+            fieldName: { type: 'string' },
+          },
+        },
+      },
+    },
+    NoteTypeValidation: {
+      type: 'object',
+      required: ['canApply', 'errors', 'warnings'],
+      additionalProperties: false,
+      properties: {
+        canApply: { type: 'boolean' },
+        errors: { type: 'array', items: { $ref: '#/sharedTypes/NoteTypeValidationIssue' } },
+        warnings: { type: 'array', items: { $ref: '#/sharedTypes/NoteTypeValidationIssue' } },
+      },
+    },
     BatchSummary: {
       type: 'object',
       required: ['succeeded', 'failed'],
@@ -277,12 +305,13 @@ export const TOOL_CONTRACTS_V1 = {
           dryRun: { type: 'boolean' },
           result: {
             type: 'object',
-            required: ['status', 'operations', 'noteType'],
+            required: ['status', 'operations', 'noteType', 'validation'],
             additionalProperties: false,
             properties: {
               status: { enum: ['planned', 'created', 'updated'] },
               operations: { type: 'array', items: { type: 'object' } },
               noteType: { $ref: '#/sharedTypes/NoteTypeSchema' },
+              validation: { $ref: '#/sharedTypes/NoteTypeValidation' },
             },
           },
         },

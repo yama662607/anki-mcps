@@ -106,6 +106,7 @@ describe('MCP server', () => {
       expect(payload.tools).not.toHaveProperty('upsert_card_type_definition');
       expect(payload.sharedTypes).toHaveProperty('NoteRecord');
       expect(payload.sharedTypes).toHaveProperty('DeckSummary');
+      expect(payload.sharedTypes).toHaveProperty('NoteTypeValidation');
     } finally {
       await closeContext(context);
     }
@@ -146,6 +147,8 @@ describe('MCP server', () => {
         },
       }));
       expect(upsertNoteType.result.status).toBe('created');
+      expect(upsertNoteType.result.validation.canApply).toBe(true);
+      expect(upsertNoteType.result.validation.errors).toEqual([]);
 
       const added = parseToolResult(await context.client.callTool({
         name: 'add_note',
@@ -338,6 +341,34 @@ describe('MCP server', () => {
       expect(result).toMatchObject({
         code: 'PROFILE_SCOPE_MISMATCH',
       });
+    } finally {
+      await closeContext(context);
+    }
+  });
+
+  it('exposes note-type lint validation through MCP on dry-run', async () => {
+    const context = await createConnectedContext();
+
+    try {
+      const result = parseToolResult(await context.client.callTool({
+        name: 'upsert_note_type',
+        arguments: {
+          profileId: 'default',
+          modelName: 'ts.v1.lint',
+          fields: [{ name: 'Prompt' }],
+          templates: [{
+            name: 'Card 1',
+            front: '{{#Hint}}<div>{{Prompt}}</div>',
+            back: '{{FrontSide}}',
+          }],
+          css: '.card { color: white;',
+        },
+      }));
+
+      expect(result.dryRun).toBe(true);
+      expect(result.result.validation.canApply).toBe(false);
+      expect(result.result.validation.errors.map((issue: { code: string }) => issue.code)).toContain('UNKNOWN_FIELD_REF');
+      expect(result.result.validation.errors.map((issue: { code: string }) => issue.code)).toContain('INVALID_CSS_SYNTAX');
     } finally {
       await closeContext(context);
     }

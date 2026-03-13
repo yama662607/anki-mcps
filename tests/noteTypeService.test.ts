@@ -34,6 +34,8 @@ describe('NoteTypeService', () => {
     expect(result.dryRun).toBe(true);
     expect(result.result.status).toBe('planned');
     expect(result.result.operations).toEqual([{ kind: 'create_model', modelName: 'ts.v1.concept' }]);
+    expect(result.result.validation.canApply).toBe(true);
+    expect(result.result.validation.errors).toEqual([]);
   });
 
   it('applies additive-safe updates and rejects destructive changes', async () => {
@@ -87,5 +89,92 @@ describe('NoteTypeService', () => {
     });
 
     expect(result.result.status).toBe('planned');
+    expect(result.result.validation.canApply).toBe(true);
+    expect(result.result.validation.errors).toEqual([]);
+  });
+
+  it('returns lint errors during dry-run without applying the note type', async () => {
+    const { service } = createService();
+
+    const result = await service.upsertNoteType({
+      profileId: 'default',
+      modelName: 'ts.v1.invalid',
+      fields: [{ name: 'Prompt' }, { name: 'Answer' }],
+      templates: [{
+        name: 'Card 1',
+        front: '{{#Hint}}<div>{{Prompt}}</div>',
+        back: '{{FrontSide}}<hr id=answer>{{Answer}}',
+      }],
+      css: '.card { color: white;',
+    });
+
+    const errorCodes = result.result.validation.errors.map((issue) => issue.code);
+    expect(result.result.validation.canApply).toBe(false);
+    expect(errorCodes).toContain('UNKNOWN_FIELD_REF');
+    expect(errorCodes).toContain('UNBALANCED_SECTION_TAG');
+    expect(errorCodes).toContain('INVALID_CSS_SYNTAX');
+  });
+
+  it('returns warnings for suspicious but applicable templates and still applies them', async () => {
+    const { service } = createService();
+
+    const dryRun = await service.upsertNoteType({
+      profileId: 'default',
+      modelName: 'ts.v1.warning',
+      fields: [{ name: 'Prompt' }, { name: 'Answer' }, { name: 'Unused' }],
+      templates: [{
+        name: 'Card 1',
+        front: '<div>{{Prompt}}</div>',
+        back: '<section>{{Answer}}</section>',
+      }],
+      css: '.card { color: #fff; background: #111; }',
+    });
+
+    const warningCodes = dryRun.result.validation.warnings.map((issue) => issue.code);
+    expect(dryRun.result.validation.canApply).toBe(true);
+    expect(warningCodes).toContain('UNUSED_FIELD');
+    expect(warningCodes).toContain('MISSING_FRONTSIDE_ON_BACK');
+
+    const applied = await service.upsertNoteType({
+      profileId: 'default',
+      modelName: 'ts.v1.warning',
+      fields: [{ name: 'Prompt' }, { name: 'Answer' }, { name: 'Unused' }],
+      templates: [{
+        name: 'Card 1',
+        front: '<div>{{Prompt}}</div>',
+        back: '<section>{{Answer}}</section>',
+      }],
+      css: '.card { color: #fff; background: #111; }',
+      dryRun: false,
+    });
+
+    expect(applied.result.status).toBe('created');
+    expect(applied.result.validation.canApply).toBe(true);
+    expect(applied.result.validation.warnings.map((issue) => issue.code)).toContain('UNUSED_FIELD');
+  });
+
+  it('rejects apply when lint reports fatal errors', async () => {
+    const { service } = createService();
+
+    await expect(
+      service.upsertNoteType({
+        profileId: 'default',
+        modelName: 'ts.v1.reject',
+        fields: [{ name: 'Prompt' }],
+        templates: [{
+          name: 'Card 1',
+          front: '<div>{{Prompt}}</div>',
+          back: '{{FrontSide}}<div>{{Missing}}</div>',
+        }],
+        dryRun: false,
+      }),
+    ).rejects.toMatchObject({
+      code: 'INVALID_ARGUMENT',
+      context: {
+        validation: {
+          canApply: false,
+        },
+      },
+    });
   });
 });

@@ -7,12 +7,36 @@ Use note type authoring when the target field structure or template design does 
 1. `list_note_types`
 2. `get_note_type_schema` for related models
 3. `upsert_note_type(dryRun=true)`
-4. Review the planned operations
+4. Review `result.operations` and `result.validation`
 5. `upsert_note_type(dryRun=false)`
 6. `ensure_deck`
 7. `add_note`
 
 No secondary registration step is required after `upsert_note_type`.
+
+## Validation model
+
+`upsert_note_type` returns structured validation data:
+
+- `validation.canApply`
+- `validation.errors[]`
+- `validation.warnings[]`
+
+Typical fatal `errors`:
+
+- unknown field references in templates
+- unbalanced or mismatched `{{#Field}} ... {{/Field}}` sections
+- invalid cloze usage
+- clearly broken CSS syntax
+
+Typical `warnings`:
+
+- fields that are defined but unused
+- templates or CSS that are unusually large
+- back templates that omit `{{FrontSide}}`
+- suspicious HTML structure that still needs real preview confirmation
+
+`dryRun=false` rejects the apply when `validation.errors` is non-empty.
 
 ## Safe update boundary
 

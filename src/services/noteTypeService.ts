@@ -3,11 +3,13 @@ import type {
   NoteTypeField,
   NoteTypeSchema,
   NoteTypeSummary,
+  NoteTypeValidation,
   NoteTypeTemplate,
   NoteTypeUpsertOperation,
 } from '../contracts/types.js';
 import type { AnkiGateway } from '../gateway/ankiGateway.js';
 import { resolveProfileId } from '../utils/profile.js';
+import { lintNoteTypeDefinition } from '../utils/noteTypeLint.js';
 
 type NoteTypeServiceConfig = {
   activeProfileId?: string;
@@ -70,6 +72,7 @@ export class NoteTypeService {
       status: 'planned' | 'created' | 'updated';
       operations: NoteTypeUpsertOperation[];
       noteType: NoteTypeSchema;
+      validation: NoteTypeValidation;
     };
   }> {
     const profileId = resolveProfileId({
@@ -78,10 +81,15 @@ export class NoteTypeService {
       requireExplicitForWrite: true,
     });
 
-    this.assertPayload(input.fields, input.templates);
-
     const dryRun = input.dryRun ?? true;
     const targetSchema = this.buildTargetSchema(input);
+    const validation = lintNoteTypeDefinition({
+      modelName: targetSchema.modelName,
+      fields: targetSchema.fields,
+      templates: targetSchema.templates,
+      css: targetSchema.css,
+      isCloze: targetSchema.isCloze,
+    });
 
     let existing: NoteTypeSchema | undefined;
     try {
@@ -110,8 +118,16 @@ export class NoteTypeService {
           status: 'planned',
           operations,
           noteType: targetSchema,
+          validation,
         },
       };
+    }
+
+    if (!validation.canApply) {
+      throw new AppError('INVALID_ARGUMENT', 'Note type validation failed', {
+        hint: 'Call upsert_note_type with dryRun=true and fix the reported validation errors before applying.',
+        context: { validation },
+      });
     }
 
     const applied = await this.ankiGateway.upsertNoteType({
@@ -144,6 +160,7 @@ export class NoteTypeService {
           fieldsOnTemplates: applied.fieldsOnTemplates,
           isCloze: applied.isCloze,
         },
+        validation,
       },
     };
   }
@@ -230,28 +247,6 @@ export class NoteTypeService {
     }
 
     return operations;
-  }
-
-  private assertPayload(fields: NoteTypeField[], templates: NoteTypeTemplate[]): void {
-    const fieldNames = fields.map((field) => field.name);
-    const templateNames = templates.map((template) => template.name);
-
-    if (new Set(fieldNames).size !== fieldNames.length) {
-      throw new AppError('INVALID_ARGUMENT', 'Duplicate field names are not allowed');
-    }
-
-    if (new Set(templateNames).size !== templateNames.length) {
-      throw new AppError('INVALID_ARGUMENT', 'Duplicate template names are not allowed');
-    }
-
-    for (const template of templates) {
-      const refs = [...this.extractFieldRefs(template.front), ...this.extractFieldRefs(template.back)];
-      for (const ref of refs) {
-        if (!fieldNames.includes(ref)) {
-          throw new AppError('INVALID_ARGUMENT', `Template ${template.name} references unknown field: ${ref}`);
-        }
-      }
-    }
   }
 
   private extractFieldRefs(template: string): string[] {

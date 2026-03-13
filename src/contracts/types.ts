@@ -40,6 +40,35 @@ export type NoteTypeUpsertOperation =
   | { kind: 'update_templates'; modelName: string; templateNames: string[] }
   | { kind: 'update_css'; modelName: string };
 
+export type NoteTypeLintIssue = {
+  code:
+    | 'UNKNOWN_FIELD_REF'
+    | 'UNBALANCED_SECTION_TAG'
+    | 'INVALID_SECTION_NESTING'
+    | 'INVALID_CLOZE_USAGE'
+    | 'INVALID_CSS_SYNTAX'
+    | 'DUPLICATE_FIELD_NAME'
+    | 'DUPLICATE_TEMPLATE_NAME'
+    | 'UNUSED_FIELD'
+    | 'LARGE_TEMPLATE'
+    | 'LARGE_CSS'
+    | 'DEEP_SECTION_NESTING'
+    | 'SUSPICIOUS_HTML_STRUCTURE'
+    | 'MISSING_FRONTSIDE_ON_BACK';
+  message: string;
+  location?: {
+    templateName?: string;
+    side: 'front' | 'back' | 'css' | 'note_type';
+    fieldName?: string;
+  };
+};
+
+export type NoteTypeValidation = {
+  canApply: boolean;
+  errors: NoteTypeLintIssue[];
+  warnings: NoteTypeLintIssue[];
+};
+
 export type DeckSummary = {
   deckName: string;
 };
